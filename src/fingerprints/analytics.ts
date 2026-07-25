@@ -1,0 +1,217 @@
+import type { Fingerprint } from '@/types'
+
+/**
+ * Product and web analytics.
+ *
+ * Reliable: analytics must run client-side to observe behaviour, so every tool
+ * here loads a script, sets a global, or beacons to its own domain. Several
+ * offer self-hosted proxying through a first-party path, which is why the
+ * request patterns also cover the common proxy routes.
+ */
+export const ANALYTICS: Fingerprint[] = [
+  {
+    id: 'google-analytics',
+    name: 'Google Analytics',
+    category: 'analytics',
+    description: 'Web analytics by Google',
+    icon: 'googleanalytics',
+    website: 'https://analytics.google.com',
+    signals: [
+      { type: 'script', pattern: /googletagmanager\.com\/gtag\/js|google-analytics\.com\/analytics\.js/, weight: 0.95 },
+      { type: 'request', pattern: /(?:www\.)?google-analytics\.com|analytics\.google\.com\/g\/collect/, weight: 0.9 },
+      { type: 'global', path: 'gtag', weight: 0.8 },
+      { type: 'cookie', pattern: /^_ga(?:_|$)/, weight: 0.85 },
+    ],
+  },
+  {
+    id: 'google-tag-manager',
+    name: 'Google Tag Manager',
+    category: 'analytics',
+    description: 'Tag and script management',
+    icon: 'googletagmanager',
+    website: 'https://tagmanager.google.com',
+    signals: [
+      { type: 'script', pattern: /googletagmanager\.com\/gtm\.js/, weight: 0.95 },
+      { type: 'global', path: 'dataLayer', weight: 0.7 },
+      { type: 'html', pattern: /googletagmanager\.com\/ns\.html/, weight: 0.85 },
+    ],
+  },
+  {
+    id: 'posthog',
+    name: 'PostHog',
+    category: 'analytics',
+    description: 'Product analytics and session replay',
+    icon: 'posthog',
+    website: 'https://posthog.com',
+    signals: [
+      { type: 'global', path: 'posthog', weight: 0.95 },
+      { type: 'request', pattern: /(?:^|\.)(?:app|us|eu)(?:-assets)?\.i?\.?posthog\.com/, weight: 0.9 },
+      { type: 'script', pattern: /posthog(?:-js)?(?:\.min)?\.js|array\.js.{0,20}posthog/, weight: 0.9 },
+      { type: 'cookie', pattern: /^ph_.*_posthog$/, weight: 0.9 },
+      { type: 'request', pattern: /\/(?:ingest|ph)\/(?:e|decide|s)\/?/, weight: 0.6 },
+    ],
+  },
+  {
+    id: 'mixpanel',
+    name: 'Mixpanel',
+    category: 'analytics',
+    description: 'Product analytics',
+    icon: 'mixpanel',
+    website: 'https://mixpanel.com',
+    signals: [
+      { type: 'global', path: 'mixpanel', weight: 0.95 },
+      { type: 'request', pattern: /(?:^|\.)api(?:-js)?\.mixpanel\.com|cdn\.mxpnl\.com/, weight: 0.9 },
+      { type: 'script', pattern: /mixpanel[.-]|mxpnl/, weight: 0.9 },
+      { type: 'storage', pattern: /^mp_[\w]+_mixpanel$/, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'amplitude',
+    name: 'Amplitude',
+    category: 'analytics',
+    description: 'Product analytics',
+    icon: 'amplitude',
+    website: 'https://amplitude.com',
+    signals: [
+      { type: 'global', path: 'amplitude', weight: 0.95 },
+      { type: 'request', pattern: /(?:^|\.)api[\d]?\.amplitude\.com|cdn\.amplitude\.com/, weight: 0.9 },
+      { type: 'storage', pattern: /^amp(?:litude)?_/, weight: 0.8 },
+    ],
+  },
+  {
+    id: 'plausible',
+    name: 'Plausible',
+    category: 'analytics',
+    description: 'Privacy-friendly web analytics',
+    icon: 'plausibleanalytics',
+    website: 'https://plausible.io',
+    signals: [
+      { type: 'script', pattern: /plausible\.io\/js|plausible(?:\.outbound-links)?\.js/, weight: 0.95 },
+      { type: 'request', pattern: /plausible\.io\/api\/event/, weight: 0.95 },
+      { type: 'global', path: 'plausible', weight: 0.9 },
+    ],
+  },
+  {
+    id: 'fathom',
+    name: 'Fathom Analytics',
+    category: 'analytics',
+    description: 'Privacy-first web analytics',
+    icon: 'fathom',
+    website: 'https://usefathom.com',
+    signals: [
+      { type: 'script', pattern: /cdn\.usefathom\.com/, weight: 0.95 },
+      { type: 'global', path: 'fathom', weight: 0.9 },
+    ],
+  },
+  {
+    id: 'segment',
+    name: 'Segment',
+    category: 'analytics',
+    description: 'Customer data pipeline',
+    icon: 'segment',
+    website: 'https://segment.com',
+    signals: [
+      { type: 'global', path: 'analytics', weight: 0.6 },
+      { type: 'request', pattern: /(?:^|\.)(?:api|cdn)\.segment\.(?:com|io)/, weight: 0.95 },
+      { type: 'script', pattern: /cdn\.segment\.com\/analytics\.js/, weight: 0.95 },
+      { type: 'cookie', pattern: /^ajs_(?:user_id|anonymous_id)$/, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'heap',
+    name: 'Heap',
+    category: 'analytics',
+    description: 'Automatic event capture analytics',
+    icon: 'heap',
+    website: 'https://heap.io',
+    signals: [
+      { type: 'global', path: 'heap', weight: 0.95 },
+      { type: 'script', pattern: /cdn\.heapanalytics\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'vercel-analytics',
+    name: 'Vercel Analytics',
+    category: 'analytics',
+    description: 'Web and speed analytics by Vercel',
+    icon: 'vercel',
+    website: 'https://vercel.com/analytics',
+    signals: [
+      { type: 'script', pattern: /\/_vercel\/(?:insights|speed-insights)/, weight: 0.95 },
+      { type: 'request', pattern: /\/_vercel\/(?:insights|speed-insights)\/(?:view|vitals)/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'cloudflare-analytics',
+    name: 'Cloudflare Analytics',
+    category: 'analytics',
+    description: 'Privacy-first web analytics',
+    icon: 'cloudflare',
+    website: 'https://cloudflare.com/web-analytics',
+    signals: [
+      { type: 'script', pattern: /static\.cloudflareinsights\.com/, weight: 0.95 },
+      { type: 'request', pattern: /cloudflareinsights\.com\/cdn-cgi\/rum/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'umami',
+    name: 'Umami',
+    category: 'analytics',
+    description: 'Open-source web analytics',
+    icon: 'umami',
+    website: 'https://umami.is',
+    signals: [
+      { type: 'script', pattern: /umami\.(?:js|is\/script\.js)|script\.js.{0,10}data-website-id/, weight: 0.9 },
+      { type: 'dom', selector: 'script[data-website-id]', weight: 0.85 },
+    ],
+  },
+  {
+    id: 'matomo',
+    name: 'Matomo',
+    category: 'analytics',
+    description: 'Self-hosted web analytics',
+    icon: 'matomo',
+    website: 'https://matomo.org',
+    signals: [
+      { type: 'global', path: '_paq', weight: 0.9 },
+      { type: 'script', pattern: /matomo\.js|piwik\.js/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'hotjar',
+    name: 'Hotjar',
+    category: 'analytics',
+    description: 'Heatmaps and session recording',
+    icon: 'hotjar',
+    website: 'https://hotjar.com',
+    signals: [
+      { type: 'global', path: 'hj', weight: 0.9 },
+      { type: 'script', pattern: /static\.hotjar\.com/, weight: 0.95 },
+      { type: 'cookie', pattern: /^_hj/, weight: 0.85 },
+    ],
+  },
+  {
+    id: 'clarity',
+    name: 'Microsoft Clarity',
+    category: 'analytics',
+    description: 'Free heatmaps and session replay',
+    icon: 'microsoft',
+    website: 'https://clarity.microsoft.com',
+    signals: [
+      { type: 'global', path: 'clarity', weight: 0.9 },
+      { type: 'script', pattern: /www\.clarity\.ms/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'june',
+    name: 'June',
+    category: 'analytics',
+    description: 'Product analytics for B2B SaaS',
+    icon: 'june',
+    website: 'https://june.so',
+    signals: [
+      { type: 'request', pattern: /(^|\.)api\.june\.so/, weight: 0.95 },
+      { type: 'script', pattern: /unpkg\.com\/@june-so/, weight: 0.9 },
+    ],
+  },
+]

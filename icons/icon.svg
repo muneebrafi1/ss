@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <rect width="128" height="128" rx="28" fill="#0B0B0F"/>
+  <!-- Three stacked layers read as a "stack"; the ring reads as a "lens". -->
+  <g fill="none" stroke="#F2F2F5" stroke-width="7" stroke-linejoin="round">
+    <path d="M64 26 96 44 64 62 32 44 Z"/>
+    <path d="M32 64l32 18 32-18"/>
+    <path d="M32 84l32 18 32-18"/>
+  </g>
+</svg>

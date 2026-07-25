@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StackLens — see what any website is built with</title>
+    <meta
+      name="description"
+      content="A Chrome extension that shows the AI tools, hosting, database, auth, payments and analytics behind any website. Private by design."
+    />
+    <link rel="icon" href="../icons/icon-128.png" />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --card: #f7f7f9;
+        --line: #e8e8ec;
+        --ink: #16161c;
+        --muted: #6b6b76;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0b0b0f;
+          --card: #16161c;
+          --line: #23232b;
+          --ink: #f2f2f5;
+          --muted: #8b8b96;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.55;
+      }
+      .wrap {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      header.site {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 28px 0;
+      }
+      header.site img {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+      }
+      header.site span {
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      h1 {
+        font-size: clamp(34px, 6vw, 54px);
+        line-height: 1.08;
+        letter-spacing: -0.03em;
+        margin: 48px 0 0;
+        font-weight: 640;
+      }
+      .lede {
+        font-size: clamp(16px, 2.2vw, 19px);
+        color: var(--muted);
+        margin: 16px 0 0;
+        max-width: 34em;
+      }
+      .cta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px;
+        margin: 32px 0 0;
+      }
+      .btn {
+        display: inline-block;
+        background: var(--ink);
+        color: var(--bg);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 550;
+        padding: 11px 20px;
+        border-radius: 8px;
+      }
+      .btn:hover {
+        opacity: 0.9;
+      }
+      .note {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      section {
+        margin: 72px 0 0;
+      }
+      h2 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        font-weight: 600;
+        margin: 0 0 18px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 14px;
+      }
+      .cell {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 18px;
+        background: var(--card);
+      }
+      .cell h3 {
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .cell p {
+        margin: 0;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .cats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .cat {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 5px 12px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .honest {
+        border-left: 2px solid var(--line);
+        padding-left: 20px;
+        max-width: 46em;
+      }
+      .honest p {
+        color: var(--muted);
+        font-size: 15px;
+      }
+      .honest strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      footer {
+        margin: 96px 0 56px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+        font-size: 13px;
+        color: var(--muted);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+      }
+      footer a {
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="site">
+        <img src="../icons/icon-128.png" alt="" />
+        <span>StackLens</span>
+      </header>
+
+      <h1>See what any website is built with.</h1>
+      <p class="lede">
+        Click once. See the hosting, database, auth, payments, analytics and AI tools behind any
+        site — grouped, readable, and honest about what it can&rsquo;t see.
+      </p>
+
+      <div class="cta">
+        <a class="btn" href="#">Add to Chrome</a>
+        <span class="note">Free. No account. Nothing leaves your device.</span>
+      </div>
+
+      <section>
+        <h2>What you get</h2>
+        <div class="grid">
+          <div class="cell">
+            <h3>300+ technologies</h3>
+            <p>
+              The modern stack and the mainstream web, from Supabase and Clerk to WordPress and
+              Shopify.
+            </p>
+          </div>
+          <div class="cell">
+            <h3>Grouped by importance</h3>
+            <p>
+              The six things you actually want are open. The other twenty categories are one click
+              away.
+            </p>
+          </div>
+          <div class="cell">
+            <h3>Deep scan</h3>
+            <p>
+              Optionally search a site&rsquo;s own JavaScript to recover model names and SDKs that
+              passive detection can&rsquo;t reach.
+            </p>
+          </div>
+          <div class="cell">
+            <h3>Export and share</h3>
+            <p>Markdown, JSON, CSV, or a clean image of the stack you can post anywhere.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>26 categories</h2>
+        <div class="cats">
+          <span class="cat">AI Models</span><span class="cat">AI SDKs</span>
+          <span class="cat">Vector DB &amp; Search</span><span class="cat">AI Voice</span>
+          <span class="cat">AI Video</span><span class="cat">Frontend</span>
+          <span class="cat">Hosting &amp; CDN</span><span class="cat">Backend</span>
+          <span class="cat">Database</span><span class="cat">Authentication</span>
+          <span class="cat">Payments</span><span class="cat">Analytics</span>
+          <span class="cat">Email</span><span class="cat">Error Monitoring</span>
+          <span class="cat">Observability</span><span class="cat">Feature Flags</span>
+          <span class="cat">Realtime</span><span class="cat">Video &amp; Media</span>
+          <span class="cat">Storage</span><span class="cat">CMS &amp; Docs</span>
+          <span class="cat">Ecommerce</span><span class="cat">Marketing &amp; CRM</span>
+          <span class="cat">Chat &amp; Support</span><span class="cat">Forms &amp; Scheduling</span>
+          <span class="cat">Maps</span><span class="cat">Consent &amp; Privacy</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>What it can and can&rsquo;t see</h2>
+        <div class="honest">
+          <p>
+            <strong>Hosting, payments, auth, analytics and support tools are detected reliably</strong>
+            — they have to run in your browser to work at all, so there is real evidence for them.
+          </p>
+          <p>
+            <strong>AI models usually cannot be seen.</strong> When a site asks GPT or Claude
+            something, that conversation happens between its servers and the model provider; your
+            browser is never part of it. Deep scan recovers what it can from the code the page
+            already loaded, and StackLens stays quiet rather than guessing.
+          </p>
+          <p>
+            There is no confidence score in the panel, because a number like &ldquo;91%
+            confident&rdquo; sounds precise while meaning very little. Instead, anything StackLens
+            isn&rsquo;t genuinely sure about simply isn&rsquo;t shown.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Private by design</h2>
+        <div class="honest">
+          <p>
+            No account, no server, no analytics, no tracking. Nothing about the sites you visit is
+            ever transmitted anywhere — everything is analysed on your own device and discarded when
+            you close your browser.
+          </p>
+          <p>
+            Cookie and storage <strong>names</strong> are read to identify services; their
+            <strong>values never are</strong>. Brand logos are bundled inside the extension rather
+            than loaded from a CDN, specifically so no third party learns which sites you scan.
+          </p>
+        </div>
+      </section>
+
+      <footer>
+        <span>StackLens</span>
+        <a href="../store/privacy-policy.md">Privacy</a>
+        <a href="#">Chrome Web Store</a>
+      </footer>
+    </div>
+  </body>
+</html>

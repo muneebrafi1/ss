@@ -1,0 +1,262 @@
+import type { Fingerprint } from '@/types'
+
+/**
+ * AI model providers.
+ *
+ * This is the least reliable category in the database and the weights reflect
+ * that honestly. Most production sites call model APIs from their backend, so
+ * the browser never observes `api.openai.com` at all. A direct request to a
+ * provider is therefore near-certain when it happens but rare; the workhorse
+ * signal is model-name and SDK strings recovered from JS bundles, which only
+ * exist after the user opts into a deep scan.
+ */
+export const AI_MODELS: Fingerprint[] = [
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    category: 'ai-models',
+    description: 'GPT models for text, images, and embeddings',
+    icon: 'openai',
+    website: 'https://openai.com',
+    signals: [
+      { type: 'request', pattern: /(^|\.)api\.openai\.com\//, weight: 0.95 },
+      { type: 'request', pattern: /oaidalleapiprodscus\.blob\.core\.windows\.net/, weight: 0.9 },
+      { type: 'request', pattern: /\.openai\.azure\.com\//, weight: 0.9 },
+      { type: 'bundle', pattern: /\b(?:gpt-4o(?:-mini)?|gpt-4\.1|gpt-4-turbo|gpt-3\.5-turbo|o[134](?:-mini)?)\b/, weight: 0.7 },
+      { type: 'bundle', pattern: /["'`]openai["'`]|openai\/(?:index|core)\.mjs/, weight: 0.55 },
+      // An OpenAI-shaped route proxied through the site's own domain. Common,
+      // but provider-agnostic, so it only reinforces — never detects alone.
+      { type: 'request', pattern: /\/v1\/chat\/completions/, weight: 0.5 },
+    ],
+    version: [
+      { from: 'bundle', pattern: /["'`](gpt-4o-mini|gpt-4o|gpt-4\.1|gpt-4-turbo|gpt-3\.5-turbo|o[134]-mini|o[134])["'`]/ },
+    ],
+  },
+  {
+    id: 'anthropic',
+    name: 'Anthropic',
+    category: 'ai-models',
+    description: 'Claude models for text and reasoning',
+    icon: 'anthropic',
+    website: 'https://anthropic.com',
+    signals: [
+      { type: 'request', pattern: /(^|\.)api\.anthropic\.com\//, weight: 0.95 },
+      { type: 'bundle', pattern: /\bclaude-(?:opus|sonnet|haiku)-[\d.]+/, weight: 0.7 },
+      { type: 'bundle', pattern: /@anthropic-ai\/sdk|anthropic-version/, weight: 0.7 },
+    ],
+    version: [{ from: 'bundle', pattern: /["'`](claude-(?:opus|sonnet|haiku)-[\d.-]+)["'`]/ }],
+  },
+  {
+    id: 'google-gemini',
+    name: 'Google Gemini',
+    category: 'ai-models',
+    description: "Google's Gemini models",
+    icon: 'googlegemini',
+    website: 'https://ai.google.dev',
+    signals: [
+      { type: 'request', pattern: /generativelanguage\.googleapis\.com/, weight: 0.95 },
+      { type: 'request', pattern: /aiplatform\.googleapis\.com/, weight: 0.85 },
+      { type: 'bundle', pattern: /\bgemini-[\d.]+-(?:flash|pro)\b/, weight: 0.7 },
+      { type: 'bundle', pattern: /@google\/gener(?:ative-ai|ai)/, weight: 0.7 },
+    ],
+    version: [{ from: 'bundle', pattern: /["'`](gemini-[\d.]+-(?:flash|pro)[\w-]*)["'`]/ }],
+  },
+  {
+    id: 'xai-grok',
+    name: 'xAI Grok',
+    category: 'ai-models',
+    description: 'Grok models from xAI',
+    icon: 'x',
+    website: 'https://x.ai',
+    signals: [
+      { type: 'request', pattern: /(^|\.)api\.x\.ai\//, weight: 0.95 },
+      { type: 'bundle', pattern: /\bgrok-[\d]+(?:-\w+)?\b/, weight: 0.7 },
+    ],
+    version: [{ from: 'bundle', pattern: /["'`](grok-[\w.-]+)["'`]/ }],
+  },
+  {
+    id: 'mistral',
+    name: 'Mistral AI',
+    category: 'ai-models',
+    description: 'Open-weight and hosted Mistral models',
+    icon: 'mistralai',
+    website: 'https://mistral.ai',
+    signals: [
+      { type: 'request', pattern: /(^|\.)api\.mistral\.ai\//, weight: 0.95 },
+      { type: 'bundle', pattern: /\bmistral-(?:large|medium|small|tiny)\b|\bministral-/, weight: 0.7 },
+    ],
+    version: [{ from: 'bundle', pattern: /["'`](mistral-[\w.-]+)["'`]/ }],
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    category: 'ai-models',
+    description: 'DeepSeek chat and reasoning models',
+    icon: 'deepseek',
+    website: 'https://deepseek.com',
+    signals: [
+      { type: 'request', pattern: /(^|\.)api\.deepseek\.com\//, weight: 0.95 },
+      { type: 'bundle', pattern: /\bdeepseek-(?:chat|coder|reasoner|v[23])\b/, weight: 0.7 },
+    ],
+  },
+  {
+    id: 'meta-llama',
+    name: 'Llama',
+    category: 'ai-models',
+    description: "Meta's open-weight Llama models",
+    icon: 'meta',
+    website: 'https://llama.com',
+    signals: [
+      { type: 'bundle', pattern: /\bllama-?3(?:\.\d)?-(?:8b|70b|405b)\b/i, weight: 0.65 },
+      { type: 'bundle', pattern: /\bmeta-llama\//i, weight: 0.7 },
+    ],
+  },
+  {
+    id: 'cohere',
+    name: 'Cohere',
+    category: 'ai-models',
+    description: 'Command models, reranking, and embeddings',
+    icon: 'cohere',
+    website: 'https://cohere.com',
+    signals: [
+      { type: 'request', pattern: /(^|\.)api\.cohere\.(?:ai|com)\//, weight: 0.95 },
+      { type: 'bundle', pattern: /\bcommand-(?:r-plus|r|light)\b/, weight: 0.65 },
+    ],
+  },
+  {
+    id: 'perplexity-api',
+    name: 'Perplexity API',
+    category: 'ai-models',
+    description: 'Search-grounded answers from Perplexity',
+    icon: 'perplexity',
+    website: 'https://perplexity.ai',
+    signals: [
+      { type: 'request', pattern: /(^|\.)api\.perplexity\.ai\//, weight: 0.95 },
+      { type: 'bundle', pattern: /\bsonar(?:-pro|-reasoning)?\b.{0,40}perplexity/i, weight: 0.6 },
+    ],
+  },
+  {
+    id: 'groq',
+    name: 'Groq',
+    category: 'ai-models',
+    description: 'Fast inference for open models',
+    icon: 'groq',
+    website: 'https://groq.com',
+    signals: [
+      { type: 'request', pattern: /(^|\.)api\.groq\.com\//, weight: 0.95 },
+      { type: 'bundle', pattern: /groq-sdk|\bgroq\b.{0,20}apiKey/i, weight: 0.6 },
+    ],
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    category: 'ai-models',
+    description: 'One API routed across many model providers',
+    icon: 'openrouter',
+    website: 'https://openrouter.ai',
+    signals: [
+      { type: 'request', pattern: /openrouter\.ai\/api/, weight: 0.95 },
+      { type: 'bundle', pattern: /openrouter\.ai\/api\/v1/, weight: 0.8 },
+    ],
+  },
+  {
+    id: 'together-ai',
+    name: 'Together AI',
+    category: 'ai-models',
+    description: 'Hosted inference for open models',
+    icon: 'together',
+    website: 'https://together.ai',
+    signals: [{ type: 'request', pattern: /(^|\.)api\.together\.(?:ai|xyz)\//, weight: 0.95 }],
+  },
+  {
+    id: 'fireworks-ai',
+    name: 'Fireworks AI',
+    category: 'ai-models',
+    description: 'Fast hosted inference for open models',
+    icon: 'fireworks',
+    website: 'https://fireworks.ai',
+    signals: [{ type: 'request', pattern: /(^|\.)api\.fireworks\.ai\//, weight: 0.95 }],
+  },
+  {
+    id: 'replicate',
+    name: 'Replicate',
+    category: 'ai-models',
+    description: 'Run open models via a hosted API',
+    icon: 'replicate',
+    website: 'https://replicate.com',
+    signals: [
+      { type: 'request', pattern: /(^|\.)api\.replicate\.com\//, weight: 0.95 },
+      { type: 'request', pattern: /replicate\.delivery/, weight: 0.85 },
+    ],
+  },
+  {
+    id: 'huggingface',
+    name: 'Hugging Face',
+    category: 'ai-models',
+    description: 'Model hub and hosted inference',
+    icon: 'huggingface',
+    website: 'https://huggingface.co',
+    signals: [
+      { type: 'request', pattern: /api-inference\.huggingface\.co/, weight: 0.95 },
+      { type: 'request', pattern: /(^|\.)huggingface\.co\//, weight: 0.7 },
+      { type: 'request', pattern: /cdn-lfs.*\.hf\.co/, weight: 0.8 },
+    ],
+  },
+  {
+    id: 'aws-bedrock',
+    name: 'AWS Bedrock',
+    category: 'ai-models',
+    description: 'Managed foundation models on AWS',
+    icon: 'amazonwebservices',
+    website: 'https://aws.amazon.com/bedrock',
+    signals: [
+      { type: 'request', pattern: /bedrock(?:-runtime)?\.[\w-]+\.amazonaws\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'stability-ai',
+    name: 'Stability AI',
+    category: 'ai-models',
+    description: 'Stable Diffusion image generation',
+    icon: 'stabilityai',
+    website: 'https://stability.ai',
+    signals: [
+      { type: 'request', pattern: /(^|\.)api\.stability\.ai\//, weight: 0.95 },
+      { type: 'bundle', pattern: /\bstable-diffusion-(?:xl|3|v?\d)/i, weight: 0.6 },
+    ],
+  },
+  {
+    id: 'black-forest-flux',
+    name: 'Black Forest Labs',
+    category: 'ai-models',
+    description: 'FLUX image generation models',
+    icon: 'blackforestlabs',
+    website: 'https://blackforestlabs.ai',
+    signals: [
+      { type: 'request', pattern: /(^|\.)api\.bfl\.(?:ml|ai)\//, weight: 0.95 },
+      { type: 'bundle', pattern: /\bflux-(?:pro|dev|schnell)\b/, weight: 0.65 },
+    ],
+  },
+  {
+    id: 'google-vision',
+    name: 'Google Cloud Vision',
+    category: 'ai-models',
+    description: 'OCR and image analysis',
+    icon: 'googlecloud',
+    website: 'https://cloud.google.com/vision',
+    signals: [{ type: 'request', pattern: /vision\.googleapis\.com/, weight: 0.95 }],
+  },
+  {
+    id: 'tesseract-js',
+    name: 'Tesseract.js',
+    category: 'ai-models',
+    description: 'OCR running in the browser',
+    icon: 'tesseract',
+    website: 'https://tesseract.projectnaptha.com',
+    signals: [
+      { type: 'script', pattern: /tesseract(?:\.min)?\.js/, weight: 0.9 },
+      { type: 'global', path: 'Tesseract', weight: 0.95 },
+      { type: 'request', pattern: /tessdata|tesseract-core/, weight: 0.8 },
+    ],
+  },
+]

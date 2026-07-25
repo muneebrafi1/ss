@@ -1,0 +1,181 @@
+import type { Fingerprint } from '@/types'
+
+/**
+ * Backend languages and frameworks.
+ *
+ * Inferred rather than observed. A backend runs entirely on the server, so
+ * detection leans on the traces it leaves in responses — a session cookie
+ * naming convention, a CSRF field, a `Server` or `X-Powered-By` header it
+ * forgot to strip. Security-conscious deployments remove exactly these, so a
+ * missing backend here means "hidden", not "absent".
+ */
+export const BACKEND: Fingerprint[] = [
+  {
+    id: 'express',
+    name: 'Express',
+    category: 'backend',
+    description: 'Node.js web framework',
+    icon: 'express',
+    website: 'https://expressjs.com',
+    implies: ['nodejs'],
+    signals: [{ type: 'header', name: 'x-powered-by', pattern: /^Express$/i, weight: 0.9 }],
+  },
+  {
+    id: 'nodejs',
+    name: 'Node.js',
+    category: 'backend',
+    description: 'JavaScript runtime on the server',
+    icon: 'nodedotjs',
+    website: 'https://nodejs.org',
+    signals: [
+      { type: 'header', name: 'x-powered-by', pattern: /Express|Nest|Koa|Next\.js/i, weight: 0.7 },
+      { type: 'cookie', pattern: /^connect\.sid$/, weight: 0.85 },
+    ],
+  },
+  {
+    id: 'php',
+    name: 'PHP',
+    category: 'backend',
+    description: 'Server-side scripting language',
+    icon: 'php',
+    website: 'https://php.net',
+    signals: [
+      { type: 'header', name: 'x-powered-by', pattern: /PHP/i, weight: 0.95 },
+      { type: 'cookie', pattern: /^PHPSESSID$/, weight: 0.9 },
+    ],
+    version: [{ from: 'header', name: 'x-powered-by', pattern: /PHP\/([\d.]+)/ }],
+  },
+  {
+    id: 'laravel',
+    name: 'Laravel',
+    category: 'backend',
+    description: 'PHP web framework',
+    icon: 'laravel',
+    website: 'https://laravel.com',
+    implies: ['php'],
+    signals: [
+      { type: 'cookie', pattern: /^laravel_session$/, weight: 0.95 },
+      { type: 'cookie', pattern: /^XSRF-TOKEN$/, weight: 0.5 },
+      { type: 'html', pattern: /laravel_session|livewire/, weight: 0.6 },
+    ],
+  },
+  {
+    id: 'django',
+    name: 'Django',
+    category: 'backend',
+    description: 'Python web framework',
+    icon: 'django',
+    website: 'https://djangoproject.com',
+    implies: ['python'],
+    signals: [
+      { type: 'cookie', pattern: /^csrftoken$/, weight: 0.8 },
+      { type: 'cookie', pattern: /^django_language$/, weight: 0.85 },
+      { type: 'html', pattern: /csrfmiddlewaretoken/, weight: 0.85 },
+    ],
+  },
+  {
+    id: 'python',
+    name: 'Python',
+    category: 'backend',
+    description: 'Server-side programming language',
+    icon: 'python',
+    website: 'https://python.org',
+    signals: [
+      { type: 'header', name: 'server', pattern: /uvicorn|gunicorn|Werkzeug|WSGIServer/i, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'fastapi',
+    name: 'FastAPI',
+    category: 'backend',
+    description: 'Modern Python API framework',
+    icon: 'fastapi',
+    website: 'https://fastapi.tiangolo.com',
+    implies: ['python'],
+    signals: [
+      { type: 'header', name: 'server', pattern: /uvicorn/i, weight: 0.75 },
+      { type: 'request', pattern: /\/(?:openapi\.json|docs|redoc)(?:$|\?)/, weight: 0.6 },
+    ],
+  },
+  {
+    id: 'flask',
+    name: 'Flask',
+    category: 'backend',
+    description: 'Lightweight Python web framework',
+    icon: 'flask',
+    website: 'https://flask.palletsprojects.com',
+    implies: ['python'],
+    signals: [{ type: 'header', name: 'server', pattern: /Werkzeug/i, weight: 0.9 }],
+  },
+  {
+    id: 'rails',
+    name: 'Ruby on Rails',
+    category: 'backend',
+    description: 'Ruby web framework',
+    icon: 'rubyonrails',
+    website: 'https://rubyonrails.org',
+    signals: [
+      { type: 'meta', name: 'csrf-param', pattern: /authenticity_token/, weight: 0.9 },
+      { type: 'html', pattern: /authenticity_token|data-turbo|turbolinks/, weight: 0.7 },
+      { type: 'cookie', pattern: /^_[\w]+_session$/, weight: 0.6 },
+      { type: 'header', name: 'x-runtime', weight: 0.6 },
+    ],
+  },
+  {
+    id: 'aspnet',
+    name: 'ASP.NET',
+    category: 'backend',
+    description: 'Microsoft web framework',
+    icon: 'dotnet',
+    website: 'https://dotnet.microsoft.com/apps/aspnet',
+    signals: [
+      { type: 'header', name: 'x-aspnet-version', weight: 0.95 },
+      { type: 'header', name: 'x-powered-by', pattern: /ASP\.NET/i, weight: 0.9 },
+      { type: 'cookie', pattern: /^(?:ASP\.NET_SessionId|\.AspNetCore)/, weight: 0.9 },
+    ],
+    version: [{ from: 'header', name: 'x-aspnet-version' }],
+  },
+  {
+    id: 'spring',
+    name: 'Spring',
+    category: 'backend',
+    description: 'Java application framework',
+    icon: 'spring',
+    website: 'https://spring.io',
+    signals: [
+      { type: 'cookie', pattern: /^JSESSIONID$/, weight: 0.7 },
+      { type: 'header', name: 'x-application-context', weight: 0.9 },
+    ],
+  },
+  {
+    id: 'phoenix',
+    name: 'Phoenix',
+    category: 'backend',
+    description: 'Elixir web framework',
+    icon: 'phoenixframework',
+    website: 'https://phoenixframework.org',
+    signals: [
+      { type: 'html', pattern: /phx-(?:main|socket|track-static)/, weight: 0.9 },
+      { type: 'script', pattern: /phoenix_live_view|phoenix\.js/, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'nestjs',
+    name: 'NestJS',
+    category: 'backend',
+    description: 'Structured Node.js framework',
+    icon: 'nestjs',
+    website: 'https://nestjs.com',
+    implies: ['nodejs'],
+    signals: [{ type: 'header', name: 'x-powered-by', pattern: /Nest/i, weight: 0.9 }],
+  },
+  {
+    id: 'deno',
+    name: 'Deno',
+    category: 'backend',
+    description: 'Secure JavaScript runtime',
+    icon: 'deno',
+    website: 'https://deno.com',
+    signals: [{ type: 'header', name: 'server', pattern: /^deno\b/i, weight: 0.9 }],
+  },
+]

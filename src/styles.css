@@ -1,0 +1,86 @@
+@import 'tailwindcss';
+
+/**
+ * Design tokens.
+ *
+ * Both themes are defined as first-class palettes rather than one being derived
+ * from the other. Tailwind 4's default `dark:` variant is already
+ * `prefers-color-scheme: dark`, so `bg-bg dark:bg-bg-dark` follows the
+ * browser with no JavaScript and no flash on open.
+ */
+@theme {
+  /* Surfaces */
+  --color-bg: #ffffff;
+  --color-bg-dark: #0b0b0f;
+  --color-card: #f7f7f9;
+  --color-card-dark: #16161c;
+  --color-card-hover: #f0f0f3;
+  --color-card-hover-dark: #1d1d25;
+
+  /* Lines — hairlines only, no drop shadows anywhere. */
+  --color-line: #e8e8ec;
+  --color-line-dark: #23232b;
+
+  /* Text */
+  --color-ink: #16161c;
+  --color-ink-dark: #f2f2f5;
+  --color-muted: #6b6b76;
+  --color-muted-dark: #8b8b96;
+
+  /* Radii */
+  --radius-card: 10px;
+  --radius-btn: 8px;
+
+  /* Motion — nothing bounces. */
+  --ease-out-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    font-family:
+      ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  /* Cards fade and rise on appear, staggered by index via --i. */
+  @keyframes sl-rise {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .sl-rise {
+    animation: sl-rise 150ms var(--ease-out-soft) both;
+    animation-delay: calc(var(--i, 0) * 20ms);
+  }
+
+  @keyframes sl-shimmer {
+    from {
+      background-position: -200% 0;
+    }
+    to {
+      background-position: 200% 0;
+    }
+  }
+
+  .sl-shimmer {
+    background-size: 200% 100%;
+    animation: sl-shimmer 1.4s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sl-rise,
+    .sl-shimmer {
+      animation: none;
+    }
+  }
+}
