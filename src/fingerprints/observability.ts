@@ -109,4 +109,83 @@ export const OBSERVABILITY: Fingerprint[] = [
       { type: 'bundle', pattern: /@elastic\/apm-rum/, weight: 0.85 },
     ],
   },
+  {
+    id: 'splunk',
+    name: 'Splunk',
+    category: 'observability',
+    description: 'Log analytics and observability',
+    icon: 'splunk',
+    website: 'https://splunk.com',
+    signals: [
+      { type: 'global', path: 'SplunkRum', weight: 0.9 },
+      { type: 'request', pattern: /\.signalfx\.com|rum-ingest\..{0,12}\.signalfx\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'sumo-logic',
+    name: 'Sumo Logic',
+    category: 'observability',
+    description: 'Cloud log management',
+    icon: 'sumologic',
+    website: 'https://sumologic.com',
+    signals: [
+      { type: 'request', pattern: /(?:endpoint|collectors)[\w-]*\.sumologic\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'appdynamics',
+    name: 'AppDynamics',
+    category: 'observability',
+    description: 'Enterprise application performance monitoring',
+    icon: 'appdynamics',
+    website: 'https://appdynamics.com',
+    signals: [
+      { type: 'global', path: 'ADRUM', weight: 0.95 },
+      { type: 'script', pattern: /adrum(?:-latest)?(?:\.min)?\.js/, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'signoz',
+    name: 'SigNoz',
+    category: 'observability',
+    description: 'Open-source OpenTelemetry backend',
+    icon: 'signoz',
+    website: 'https://signoz.io',
+    signals: [
+      { type: 'request', pattern: /ingest\.[\w-]+\.signoz\.cloud/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'coralogix',
+    name: 'Coralogix',
+    category: 'observability',
+    description: 'Log and trace analytics',
+    icon: 'coralogix',
+    website: 'https://coralogix.com',
+    signals: [
+      { type: 'request', pattern: /(?:ingress|api)\.[\w-]*coralogix\.(?:com|us|in)/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'middleware-io',
+    name: 'Middleware',
+    category: 'observability',
+    description: 'Full-stack observability platform',
+    icon: 'middleware',
+    website: 'https://middleware.io',
+    signals: [
+      { type: 'request', pattern: /[\w-]+\.middleware\.io/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'checkly',
+    name: 'Checkly',
+    category: 'observability',
+    description: 'Synthetic monitoring for APIs and browsers',
+    icon: 'checkly',
+    website: 'https://checklyhq.com',
+    signals: [
+      { type: 'request', pattern: /api\.checklyhq\.com/, weight: 0.95 },
+    ],
+  },
 ]

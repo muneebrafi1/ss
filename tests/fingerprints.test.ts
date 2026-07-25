@@ -43,6 +43,29 @@ describe('fingerprint database', () => {
     expect(tooLoose).toEqual([])
   })
 
+  it('rests every entry on two signals, or one that is proof on its own', () => {
+    /*
+     * The rule that stops a detection from being one coincidence away from
+     * wrong. Under noisy-OR a lone 0.6 signal lands exactly on the display
+     * threshold, so a single change in how a site loads that service drops the
+     * detection entirely — and because the panel shows no confidence, nobody
+     * would ever see that it had. Either corroborate it, or use a signal strong
+     * enough to be proof by itself: a scoped package specifier, a branded
+     * cookie, a vendor's own hostname.
+     *
+     * `scripts/audit-signals.mjs` reports which entries fall short and what
+     * they already carry, which a failing assertion cannot.
+     */
+    const thin: string[] = []
+    for (const f of DATABASE_FINGERPRINTS) {
+      const strongest = f.signals.reduce((max, s) => Math.max(max, s.weight), 0)
+      if (f.signals.length < 2 && strongest < 0.9) {
+        thin.push(`${f.id} (${f.signals.length} signal, strongest ${strongest})`)
+      }
+    }
+    expect(thin).toEqual([])
+  })
+
   it('anchors every cookie and storage key pattern', () => {
     // These match short strings, so an unanchored fragment collides easily —
     // /session/ would hit half the cookies on the web.

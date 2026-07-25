@@ -3,7 +3,7 @@
 A Chrome extension that shows what any website is built with — AI tools, hosting,
 database, auth, payments, analytics and more — in one click.
 
-Detects **383 technologies across 26 categories**, covering both the modern
+Detects **532 technologies across 26 categories**, covering both the modern
 AI/SaaS stack and the mainstream web, so it produces a useful answer on an AI
 startup and on an ordinary business site alike.
 
@@ -37,7 +37,7 @@ deep scan (opt-in)   ─┘
 The **detection engine** (`src/engine/`) is pure functions with no `chrome.*`
 dependency: it takes an `Evidence` object and returns `Detection[]`. Everything
 browser-coupled lives on the other side of that boundary. That is what keeps a
-383-entry database maintainable and lets the entire matching layer be tested in
+532-entry database maintainable and lets the entire matching layer be tested in
 Node without a browser.
 
 ### Scoring
@@ -88,7 +88,7 @@ So the in-page probe also reads:
   point where the HTML sample is truncated.
 
 All of it lands in the existing `requests` and `html` matching paths, so the
-383-entry database gains reach without a single entry being rewritten.
+532-entry database gains reach without a single entry being rewritten.
 
 Subresource response headers are deliberately **not** collected. A `cf-ray` on a
 font file says who serves that font, not who hosts the site; folding those in
@@ -169,6 +169,17 @@ Then run `npm test`. `tests/fingerprints.test.ts` enforces unique ids, valid
 regexes, weight bounds, anchored cookie patterns, and that a bundled icon exists
 — a malformed entry fails the suite instead of silently never matching.
 
+It also enforces the rule that matters most: **every entry carries two signals,
+or one weighted at least 0.9.** Under noisy-OR a lone 0.6 signal lands exactly on
+the display threshold, so one change in how a site loads that service drops the
+detection — and with no confidence shown, nobody would ever notice. Corroborate
+it, or use a signal that is proof on its own: a scoped package specifier, a
+branded cookie, a vendor's own hostname.
+
+`node scripts/audit-signals.mjs` lists the entries that fall short and what they
+already carry, which a failing assertion cannot. `--all` ranks the whole database
+weakest-first.
+
 Signal types: `request`, `header`, `cookie`, `global`, `script`, `meta`, `dom`,
 `storage`, `html`, `bundle`. Only `bundle` requires a deep scan.
 
@@ -193,13 +204,14 @@ careless pattern change makes a detection disappear in CI with no browser
 involved.
 
 `npm run test:e2e` runs three browser suites against the built extension in real
-Chrome. `run.mjs` drives the panel across six shapes of website — a modern AI SaaS, a WordPress blog with
-WooCommerce, a Shopify store, a single-page app, a bare HTML page, and a page
-that refuses script downloads — plus the per-site off switch and an unsupported
-page. `functions.mjs` exercises every user-facing action — both share-card
+Chrome. `run.mjs` drives the panel across eleven shapes of website — a modern AI SaaS, a
+WordPress blog with WooCommerce, a Shopify store, a single-page app, a marketing
+site, a docs site, a site-builder small business, a publisher thick with ad tech,
+a bare HTML page, a page that refuses script downloads, and a deliberate stress
+page — plus the per-site off switch and an unsupported page. `functions.mjs` exercises every user-facing action — both share-card
 formats are downloaded, measured, and checked for drawn content in the footer
 band as well as overall, and each export is opened and read. `pages.mjs` clicks
-through the report, history, technologies and settings pages. 117 browser checks
+through the report, history, technologies and settings pages. 154 browser checks
 in all, including the privacy guarantee that no cookie value is ever stored.
 
 Three of those checks exist to prove the widened collection is real rather than
@@ -210,6 +222,15 @@ incidental, each isolating a path nothing else could reach:
 | modern | Segment | a `<link rel="preconnect">` that fetches nothing at all |
 | shopify | Google Tag Manager | an inline script 279,000 characters into the page, past the HTML cut |
 | spa | Cloudinary, Calendly | an `<img>` and an `<iframe>` declared in markup |
+
+The **heavy** fixture is not a website; it is a stress page — 400 images from one
+CDN, 60 iframes, 1,500 XHRs, a 1.4MB document and 200KB of inline script. Every
+cap is recent code, and an untested cap fails in the worst way: by silently
+discarding evidence on exactly the large sites where the panel most needs to be
+right. It is also where the request budget's shape is asserted directly. The page
+issues one call to `js.stripe.com` *after* 1,500 calls to a single API host; under
+a flat first-come cap that call is dropped and the site's payment provider
+disappears, so the suite checks that Stripe survives.
 
 Chrome is launched with `--host-resolver-rules` mapping every hostname to the
 fixture server, so the page genuinely requests `api.openai.com` and the

@@ -19,7 +19,7 @@ Click the StackLens icon on any site and see the tools behind it, grouped and
 readable: hosting, database, authentication, payments, analytics, email,
 support, and the AI services underneath modern products.
 
-**383 technologies detected across 26 categories**
+**532 technologies detected across 26 categories**
 
 - **AI** — OpenAI, Anthropic, Gemini, Mistral, DeepSeek, Groq, Replicate,
   Hugging Face, and the SDKs that call them

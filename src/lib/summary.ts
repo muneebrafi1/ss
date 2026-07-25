@@ -15,6 +15,20 @@ import type { CategoryId, Detection } from '@/types'
  * returns `null` and every caller omits the line rather than printing a hedge.
  */
 
+/**
+ * Shortens a version or model id for display.
+ *
+ * Model ids carry a dated build — `claude-sonnet-4-5-20250929`, `gpt-4o-2024-08-06`
+ * — and that suffix is the least useful eight characters on the card. It pushed
+ * "Anthropic claude-sonne…" past the edge of an 88px tile, so the one thing a
+ * deep scan exists to reveal was the one thing that would not fit. The date is
+ * dropped for display only; the captured value is untouched everywhere else.
+ */
+export function displayVersion(version: string | null): string | null {
+  if (!version) return null
+  return version.replace(/-(?:20\d{2})[-]?(?:\d{2})[-]?(?:\d{2})$/, '')
+}
+
 /** Categories that can be the subject of the sentence, most telling first. */
 const SUBJECT_ORDER: CategoryId[] = ['frameworks', 'cms', 'ecommerce', 'backend']
 

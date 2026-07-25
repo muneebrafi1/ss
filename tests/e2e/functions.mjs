@@ -155,9 +155,7 @@ try {
   {
     await popup.fill('input[type="search"]', 'stripe')
     await popup.waitForTimeout(400)
-    const names = await popup.$$eval('button[type="button"] span.line-clamp-2', (n) =>
-      n.map((x) => x.textContent?.trim()),
-    )
+    const names = await popup.$$eval('button[data-tool]', (n) => n.map((x) => x.dataset.tool))
     check('filter narrows to matches', names.length > 0 && names.every((n) => /stripe/i.test(n)),
       names.join(', '))
 
@@ -167,9 +165,7 @@ try {
 
     await popup.fill('input[type="search"]', 'payments')
     await popup.waitForTimeout(400)
-    const byCategory = await popup.$$eval('button[type="button"] span.line-clamp-2', (n) =>
-      n.map((x) => x.textContent?.trim()),
-    )
+    const byCategory = await popup.$$eval('button[data-tool]', (n) => n.map((x) => x.dataset.tool))
     check('filter matches on category name', byCategory.some((n) => n?.startsWith('Stripe')),
       byCategory.join(', '))
 
@@ -180,7 +176,7 @@ try {
   console.log('\n=== Card links ===')
   {
     const pagesBefore = context.pages().length
-    await popup.click('button:has(span:text-is("Stripe"))')
+    await popup.click('button[data-tool="Stripe"]')
     await sleep(900)
     check('clicking a tool opens its site', context.pages().length > pagesBefore)
     for (const p of context.pages().slice(pagesBefore)) await p.close().catch(() => {})

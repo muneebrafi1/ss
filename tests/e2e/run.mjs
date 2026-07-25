@@ -87,9 +87,7 @@ async function readCards(popup) {
     await more.click()
     await popup.waitForTimeout(350)
   }
-  return popup.$$eval('button[type="button"] span.line-clamp-2', (nodes) =>
-    nodes.map((n) => n.textContent?.trim() ?? ''),
-  )
+  return popup.$$eval('button[data-tool]', (nodes) => nodes.map((n) => n.dataset.tool ?? ''))
 }
 
 const evidenceFor = (tabId) =>
@@ -321,7 +319,127 @@ try {
   await closeExtras()
 
   /* ====================================================================== */
-  console.log('\n=== 8. Unsupported page ===')
+  console.log('\n=== 8. Marketing site ===')
+  {
+    const { popup } = await inspect(SITES.marketing)
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ')}`)
+    for (const expected of ['Webflow', 'HubSpot', 'Calendly', 'OneTrust', 'Google Fonts']) {
+      check(`detects ${expected}`, names.some((n) => n.startsWith(expected)))
+    }
+    for (const absent of ['Shopify', 'WordPress', 'Next.js', 'Stripe']) {
+      check(`no false positive: ${absent}`, !names.some((n) => n.startsWith(absent)))
+    }
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 9. Documentation site ===')
+  {
+    const { popup } = await inspect(SITES.docs, { settle: 1800 })
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ')}`)
+    // No cookies and almost no globals: everything here has to come from the
+    // generator meta tag, script paths and one XHR.
+    for (const expected of ['Docusaurus', 'GitHub Pages', 'Algolia']) {
+      check(`detects ${expected}`, names.some((n) => n.startsWith(expected)))
+    }
+    check('reads the Docusaurus version', names.some((n) => n.includes('3.6.3')), names.join(', '))
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 10. Site-builder small business ===')
+  {
+    const { popup } = await inspect(SITES.smallbiz)
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ')}`)
+    for (const expected of ['Wix', 'Meta Pixel', 'reCAPTCHA', 'jQuery']) {
+      check(`detects ${expected}`, names.some((n) => n.startsWith(expected)))
+    }
+    for (const absent of ['WordPress', 'Webflow', 'Squarespace']) {
+      check(`no false positive: ${absent}`, !names.some((n) => n.startsWith(absent)))
+    }
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 11. Publisher with ad tech ===')
+  {
+    const { popup } = await inspect(SITES.publisher)
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ')}`)
+    // The noisiest shape on the real web: a dozen third parties on one page,
+    // where the risk is not missing one but inventing one.
+    for (const expected of ['WordPress', 'Cloudflare', 'JW Player', 'Parse.ly']) {
+      check(`detects ${expected}`, names.some((n) => n.startsWith(expected)))
+    }
+    for (const absent of ['Shopify', 'Vercel', 'Clerk', 'Wix']) {
+      check(`no false positive: ${absent}`, !names.some((n) => n.startsWith(absent)))
+    }
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 12. Stress page: the evidence caps ===')
+  {
+    // 400 images from one host, 60 iframes, 1,500 XHRs, a 1.4MB document and
+    // 200KB of inline script. The caps in store.ts and the per-host image limit
+    // in the probe are all recent, and an untested cap fails by silently
+    // discarding evidence on exactly the large sites where it matters.
+    const started = Date.now()
+    // This page is 1.4MB and issues 1,500 requests; four seconds was not enough
+    // for it to stop moving, which made the late-request check flaky.
+    const { popup, tabId } = await inspect(SITES.heavy, { settle: 7000 })
+    const elapsed = Date.now() - started
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ') || '(none)'}`)
+
+    check('panel still renders on a very large page', names.length > 0, `${elapsed}ms to open`)
+    check('finds the framework despite the noise', names.some((n) => n.startsWith('React')))
+
+    const evidence = await evidenceFor(tabId)
+    const requests = evidence?.requests ?? []
+    check('request list is capped, not unbounded', requests.length <= 800, `${requests.length}`)
+    // Issued after 1,500 calls to one API host. A flat first-come cap drops it.
+    check(
+      'a late request to a rare host survives the flood',
+      names.some((n) => n.startsWith('Stripe')),
+      requests.some((r) => r.startsWith('js.stripe.com')) ? 'in evidence' : 'missing',
+    )
+
+    // Per-host sampling is the point: no single noisy host may crowd out the
+    // dozens of hosts seen once, which is where detections actually come from.
+    const perHost = new Map()
+    for (const r of requests) {
+      const host = r.split('/')[0]
+      perHost.set(host, (perHost.get(host) ?? 0) + 1)
+    }
+    const thirdParty = [...perHost].filter(([h]) => h !== SITES.heavy)
+    const worst = thirdParty.reduce((m, [, n]) => Math.max(m, n), 0)
+    check('no third-party host dominates the budget', worst <= 8, `worst host contributed ${worst}`)
+    check(
+      'many distinct hosts survive the noise',
+      perHost.size >= 40,
+      `${perHost.size} distinct hosts`,
+    )
+
+    const inlineChars = (evidence?.inlineScripts ?? []).reduce((n, s) => n + s.length, 0)
+    check('inline script budget holds', inlineChars <= 120000, `${inlineChars} chars`)
+    check('html sample is capped', (evidence?.html ?? '').length <= 250000)
+
+    // The whole record has to fit in session storage, which rejects oversized
+    // values outright rather than truncating them.
+    const bytes = await worker.evaluate(async (id) => {
+      const stored = await chrome.storage.session.get(`tab:${id}`)
+      return JSON.stringify(stored[`tab:${id}`] ?? {}).length
+    }, tabId)
+    check('stored record stays well under the session quota', bytes < 3_000_000, `${bytes} bytes`)
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 13. Unsupported page ===')
   {
     const page = await context.newPage()
     await page.goto('about:blank')

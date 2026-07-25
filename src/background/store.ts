@@ -30,6 +30,9 @@ const DEBOUNCE_MS = 250
 const MAX_REQUESTS = 800
 const MAX_HTML_CHARS = 250_000
 const MAX_INLINE_SCRIPT_CHARS = 120_000
+/** Per-host share of the request budget, so no one noisy host can fill it. */
+const MAX_PER_HOST = 8
+const MAX_PER_FIRST_PARTY = 60
 const MAX_BUNDLE_CHARS = 3_000_000
 
 const keyFor = (tabId: number) => `tab:${tabId}`
@@ -88,14 +91,55 @@ export async function clearEvidence(tabId: number): Promise<void> {
   queues.delete(tabId)
 }
 
+/**
+ * Host portion of a normalized "host/path?query" request string.
+ *
+ * Deliberately not `new URL()`: these strings have no scheme, so parsing them
+ * would need one bolted back on, and the host is everything before the first
+ * slash by construction.
+ */
+function hostOfRequest(request: string): string {
+  const slash = request.indexOf('/')
+  return slash === -1 ? request : request.slice(0, slash)
+}
+
 /** Merges one patch into stored evidence, applying every cap. */
 function merge(base: Evidence, patch: Partial<Evidence>): Evidence {
   const next: Evidence = { ...base, ...patch }
 
   if (patch.requests?.length) {
+    /*
+     * The request budget is spent per host, not first-come-first-served.
+     *
+     * Detection keys on hostnames and at most a path prefix, so the five
+     * hundredth call to one API host adds nothing — but under a flat cap it
+     * takes a slot from a host seen once, and hosts seen once are where almost
+     * every detection comes from. A page making a thousand ad or telemetry
+     * calls could fill the entire list before its payment provider was reached.
+     *
+     * The probe applies the same rule to what it collects, but it cannot be the
+     * only place: `webRequest.onCompleted` feeds this list too, one request at a
+     * time, and knows nothing about what came before. This is the one layer both
+     * sources pass through.
+     *
+     * First-party gets a far larger share because that is where the specific
+     * evidence lives — `/wp-json/`, `/socket.io/?EIO=`, `/_next/static/`.
+     */
     const seen = new Set(base.requests)
+    const perHost = new Map<string, number>()
+    for (const request of seen) {
+      const host = hostOfRequest(request)
+      perHost.set(host, (perHost.get(host) ?? 0) + 1)
+    }
+
     for (const request of patch.requests) {
       if (seen.size >= MAX_REQUESTS) break
+      if (seen.has(request)) continue
+      const host = hostOfRequest(request)
+      const limit = host === next.hostname ? MAX_PER_FIRST_PARTY : MAX_PER_HOST
+      const used = perHost.get(host) ?? 0
+      if (used >= limit) continue
+      perHost.set(host, used + 1)
       seen.add(request)
     }
     next.requests = [...seen]

@@ -138,31 +138,49 @@ export function domProbe(selectors: string[]): DomProbeResult {
    */
   const resourceUrls: string[] = []
   const seenUrls = new Set<string>()
-  /** Images repeat by the hundred from one CDN; a few per host prove the host. */
   const perHost = new Map<string, number>()
 
-  function take(raw: string | null | undefined, hostLimit: number): void {
+  /*
+   * Sampling is per host, and applies to every source including Resource
+   * Timing.
+   *
+   * Detection keys on hostnames and at most a path prefix, so the four
+   * hundredth image from one CDN adds nothing — but it does consume a slot that
+   * a host seen only once would have used. A news page with a thousand ad
+   * requests could otherwise crowd out its own payment provider entirely.
+   *
+   * The page's own host gets a far larger budget because first-party paths are
+   * where the specific evidence lives: `/wp-json/`, `/socket.io/?EIO=`,
+   * `/_next/static/`. Those are exactly the URLs that must not be sampled away.
+   */
+  let ownHost = ''
+  try {
+    ownHost = location.host
+  } catch {
+    ownHost = ''
+  }
+
+  function take(raw: string | null | undefined): void {
     if (!raw || seenUrls.size >= 600) return
     if (raw.lastIndexOf('http', 0) !== 0) return
     if (seenUrls.has(raw)) return
-    if (hostLimit > 0) {
-      let host = ''
-      try {
-        host = new URL(raw).host
-      } catch {
-        return
-      }
-      const used = perHost.get(host) ?? 0
-      if (used >= hostLimit) return
-      perHost.set(host, used + 1)
+    let host = ''
+    try {
+      host = new URL(raw).host
+    } catch {
+      return
     }
+    const limit = host === ownHost ? 60 : 8
+    const used = perHost.get(host) ?? 0
+    if (used >= limit) return
+    perHost.set(host, used + 1)
     seenUrls.add(raw)
     resourceUrls.push(raw)
   }
 
   try {
     const entries = performance.getEntriesByType('resource')
-    for (let i = 0; i < entries.length; i++) take(entries[i]?.name, 0)
+    for (let i = 0; i < entries.length; i++) take(entries[i]?.name)
   } catch {
     // Resource Timing is unavailable in a few embedded contexts.
   }
@@ -182,7 +200,7 @@ export function domProbe(selectors: string[]): DomProbeResult {
       ) {
         continue
       }
-      take(node.href, 0)
+      take(node.href)
     }
   } catch {
     // Same.
@@ -190,14 +208,14 @@ export function domProbe(selectors: string[]): DomProbeResult {
 
   try {
     const images = document.querySelectorAll('img[src]')
-    for (let i = 0; i < images.length; i++) take((images[i] as HTMLImageElement).src, 3)
+    for (let i = 0; i < images.length; i++) take((images[i] as HTMLImageElement).src)
   } catch {
     // Same.
   }
 
   try {
     const frames = document.querySelectorAll('iframe[src]')
-    for (let i = 0; i < frames.length; i++) take((frames[i] as HTMLIFrameElement).src, 4)
+    for (let i = 0; i < frames.length; i++) take((frames[i] as HTMLIFrameElement).src)
   } catch {
     // Same.
   }

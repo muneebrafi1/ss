@@ -1,4 +1,5 @@
 import { CATEGORIES } from '@/fingerprints'
+import { displayVersion } from '@/lib/summary'
 import { ToolLogo } from '@/popup/ToolLogo'
 
 /**
@@ -70,10 +71,10 @@ export function TechList({ items, emptyLabel }: { items: TechItem[]; emptyLabel?
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] font-medium text-ink dark:text-ink-dark">
                         {item.name}
-                        {item.version && (
+                        {displayVersion(item.version ?? null) && (
                           <span className="font-normal text-muted dark:text-muted-dark">
                             {' '}
-                            {item.version}
+                            {displayVersion(item.version ?? null)}
                           </span>
                         )}
                       </span>

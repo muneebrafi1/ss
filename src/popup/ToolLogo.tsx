@@ -1,4 +1,4 @@
-import { ICONS } from '@/assets/icons.generated'
+import { iconEntry } from '@/assets/icons.generated'
 
 /**
  * Renders a tool's logo.
@@ -66,7 +66,7 @@ function initials(name: string): string {
 }
 
 export function ToolLogo({ icon, name, size = 28 }: { icon: string; name: string; size?: number }) {
-  const entry = ICONS[icon]
+  const entry = iconEntry(icon)
 
   if (entry?.body) {
     // Monochrome silhouettes may be recoloured for contrast; full-colour brand

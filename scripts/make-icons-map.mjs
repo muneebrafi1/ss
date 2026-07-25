@@ -229,7 +229,16 @@ async function resolveIcon(slug) {
 }
 
 async function findIcon(slug) {
-  const candidates = [slug, ...(ALIASES[slug] ?? [])]
+  /*
+   * `Object.hasOwn`, not `ALIASES[slug] ?? []`.
+   *
+   * A brand called "Constructor" gives a slug of `constructor`, which resolves
+   * to `Object.prototype.constructor` — a function, not an array — and the
+   * spread then throws. Every inherited member is the same trap: a future
+   * `toString` or `valueOf` slug would do it again.
+   */
+  const aliases = Object.hasOwn(ALIASES, slug) ? ALIASES[slug] : []
+  const candidates = [slug, ...(Array.isArray(aliases) ? aliases : [])]
   for (const name of candidates) {
     const latest = fromSimpleIcons(siLatest, name, 'simple-icons')
     if (latest) return latest
@@ -319,6 +328,19 @@ export interface IconEntry {
 
 export const ICONS: Record<string, IconEntry> = {
 ${entries.join('\n')}
+}
+
+/**
+ * Looks up a slug without consulting the prototype chain.
+ *
+ * \`ICONS['constructor']\` on a plain object literal returns
+ * \`Object.prototype.constructor\` — a function with no \`body\` and no \`hex\` —
+ * so a brand named Constructor would silently render as a grey monogram even
+ * with artwork bundled for it. Any inherited member is the same trap. Always
+ * reach for icons through here.
+ */
+export function iconEntry(slug: string): IconEntry | undefined {
+  return Object.hasOwn(ICONS, slug) ? ICONS[slug] : undefined
 }
 `
 

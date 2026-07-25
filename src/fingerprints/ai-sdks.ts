@@ -55,7 +55,8 @@ export const AI_SDKS: Fingerprint[] = [
     description: 'TypeScript framework for AI agents',
     icon: 'mastra',
     website: 'https://mastra.ai',
-    signals: [{ type: 'bundle', pattern: /@mastra\/(?:core|client-js)/, weight: 0.85 }],
+    // A scoped npm specifier cannot appear in a bundle by coincidence.
+    signals: [{ type: 'bundle', pattern: /@mastra\/(?:core|client-js)/, weight: 0.9 }],
   },
   {
     id: 'assistant-ui',
@@ -64,7 +65,8 @@ export const AI_SDKS: Fingerprint[] = [
     description: 'React components for chat interfaces',
     icon: 'react',
     website: 'https://assistant-ui.com',
-    signals: [{ type: 'bundle', pattern: /@assistant-ui\/react/, weight: 0.85 }],
+    // Same: the scope makes this proof rather than a hint.
+    signals: [{ type: 'bundle', pattern: /@assistant-ui\/react/, weight: 0.9 }],
   },
   {
     id: 'copilotkit',
@@ -156,24 +158,17 @@ export const AI_SDKS: Fingerprint[] = [
     website: 'https://braintrust.dev',
     signals: [{ type: 'request', pattern: /(^|\.)api\.braintrust\.dev|braintrustdata\.com/, weight: 0.95 }],
   },
-  {
-    id: 'crewai',
-    name: 'CrewAI',
-    category: 'ai-sdks',
-    description: 'Multi-agent orchestration framework',
-    icon: 'crewai',
-    website: 'https://crewai.com',
-    signals: [{ type: 'bundle', pattern: /\bcrewai\b|crewai_tools/, weight: 0.8 }],
-  },
-  {
-    id: 'pydantic-ai',
-    name: 'Pydantic AI',
-    category: 'ai-sdks',
-    description: 'Typed agent framework for Python',
-    icon: 'pydanticai',
-    website: 'https://ai.pydantic.dev',
-    signals: [{ type: 'bundle', pattern: /pydantic[_-]ai/, weight: 0.8 }],
-  },
+  /*
+   * CrewAI and Pydantic AI used to sit here and have been removed on purpose.
+   *
+   * Both are Python-only server frameworks with no browser artefact of any
+   * kind, so the only thing their patterns could ever match is a page that
+   * *mentions* them — a docs site, a comparison post, a job ad. That is a
+   * detector for the word, not for the technology, and shipping it would break
+   * the one promise the panel makes by showing nothing at all when it is
+   * unsure. LangChain and LlamaIndex stay because both publish JavaScript
+   * packages that genuinely run in the browser.
+   */
   {
     id: 'litellm',
     name: 'LiteLLM',

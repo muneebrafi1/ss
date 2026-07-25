@@ -1,7 +1,7 @@
-import { ICONS } from '@/assets/icons.generated'
+import { iconEntry } from '@/assets/icons.generated'
 import { STACKLENS_MARK_BODY, STACKLENS_NAME, stacklensLink } from '@/lib/brand'
 import { groupDetections } from '@/lib/grouping'
-import { stackSummary } from '@/lib/summary'
+import { displayVersion, stackSummary } from '@/lib/summary'
 import type { Detection } from '@/types'
 
 /**
@@ -202,7 +202,7 @@ function svgImage(body: string, viewBox: string, size: number, fill?: string): P
  * whole card is rendered at 2x.
  */
 function logoImage(detection: Detection, size: number): Promise<HTMLImageElement | null> {
-  const entry = ICONS[detection.icon]
+  const entry = iconEntry(detection.icon)
   if (!entry?.body) return Promise.resolve(null)
 
   // Monochrome marks that would vanish against the dark card are lifted to the
@@ -448,7 +448,7 @@ export async function renderShareCard({
         drawMonogram(
           ctx,
           initials(detection.name),
-          ICONS[detection.icon]?.hex ?? '#6B6B76',
+          iconEntry(detection.icon)?.hex ?? '#6B6B76',
           x,
           rowY,
           L.tile,
@@ -462,17 +462,18 @@ export async function renderShareCard({
       ctx.fillStyle = INK
       ctx.font = `500 ${L.nameFont}px ${FONT}`
 
-      if (detection.version) {
+      const version = displayVersion(detection.version)
+      if (version) {
         const suffixFont = `400 ${L.nameFont - 2}px ${FONT}`
         ctx.font = suffixFont
-        const suffixWidth = ctx.measureText(` ${detection.version}`).width
+        const suffixWidth = ctx.measureText(` ${version}`).width
         ctx.font = `500 ${L.nameFont}px ${FONT}`
         const name = truncate(ctx, detection.name, available - suffixWidth)
         ctx.fillText(name, nameX, rowY + L.tile / 2 + 1)
         const nameWidth = ctx.measureText(name).width
         ctx.font = suffixFont
         ctx.fillStyle = FAINT
-        ctx.fillText(` ${detection.version}`, nameX + nameWidth, rowY + L.tile / 2 + 1)
+        ctx.fillText(` ${version}`, nameX + nameWidth, rowY + L.tile / 2 + 1)
       } else {
         ctx.fillText(truncate(ctx, detection.name, available), nameX, rowY + L.tile / 2 + 1)
       }
