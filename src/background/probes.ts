@@ -7,6 +7,11 @@
  * inline is deliberate — a bundler that hoisted a shared helper out would
  * produce a function that throws a ReferenceError once injected.
  *
+ * That constraint is also why the probe returns *raw* resource URLs rather than
+ * normalized ones: `normalizeRequest` lives in the collector and cannot be
+ * called from here, so normalization happens on the other side of the boundary
+ * where one implementation serves both the probe and the webRequest listener.
+ *
  * Both return plain JSON-serializable objects, which `executeScript` hands back
  * directly. That is why no `postMessage` relay is needed even for the MAIN
  * world, where `chrome.runtime` is unavailable.
@@ -18,6 +23,14 @@ export interface DomProbeResult {
   domMatches: string[]
   storageKeys: string[]
   html: string
+  /** Text of every inline `<script>`, capped. */
+  inlineScripts: string[]
+  /**
+   * Absolute URLs of everything the page loaded or declared it would load:
+   * Resource Timing entries, `<link>` hrefs, `<img>` and `<iframe>` srcs.
+   * Normalized and folded into `Evidence.requests` by the collector.
+   */
+  resourceUrls: string[]
 }
 
 export interface GlobalsProbeResult {
@@ -26,8 +39,9 @@ export interface GlobalsProbeResult {
 }
 
 /**
- * Runs in the ISOLATED world: reads the DOM, scripts, meta tags, and the KEYS
- * of local and session storage. Storage and cookie values are never read.
+ * Runs in the ISOLATED world: reads the DOM, scripts, meta tags, the page's
+ * resource list, and the KEYS of local and session storage. Storage and cookie
+ * values are never read.
  */
 export function domProbe(selectors: string[]): DomProbeResult {
   const scripts: string[] = []
@@ -88,7 +102,107 @@ export function domProbe(selectors: string[]): DomProbeResult {
     html = ''
   }
 
-  return { scripts, metas, domMatches, storageKeys, html }
+  /*
+   * Inline script text.
+   *
+   * A great many services announce themselves only in a snippet the site pastes
+   * into its own markup — a GTM container id, `window.intercomSettings`, the
+   * Segment loader. Those live far down a long document and are routinely past
+   * the point where the HTML sample above is truncated, so reading them
+   * separately is the difference between detecting them and not.
+   */
+  const inlineScripts: string[] = []
+  try {
+    const inline = document.querySelectorAll('script:not([src])')
+    let budget = 120000
+    for (let i = 0; i < inline.length && budget > 0; i++) {
+      const text = inline[i]?.textContent
+      if (!text) continue
+      const slice = text.slice(0, Math.min(20000, budget))
+      inlineScripts.push(slice)
+      budget -= slice.length
+    }
+  } catch {
+    // Nothing here is load-bearing enough to fail the whole probe.
+  }
+
+  /*
+   * Everything the page fetched or declared it would fetch.
+   *
+   * Resource Timing is the important half: it is a complete list held by the
+   * page itself, so it does not depend on this extension's service worker
+   * having been awake when the requests were made. `<link rel=preconnect>` is
+   * the useful outlier in the other direction — it names a host before anything
+   * is fetched from it at all, which identifies a checkout or embed provider on
+   * a page where the widget was never opened.
+   */
+  const resourceUrls: string[] = []
+  const seenUrls = new Set<string>()
+  /** Images repeat by the hundred from one CDN; a few per host prove the host. */
+  const perHost = new Map<string, number>()
+
+  function take(raw: string | null | undefined, hostLimit: number): void {
+    if (!raw || seenUrls.size >= 600) return
+    if (raw.lastIndexOf('http', 0) !== 0) return
+    if (seenUrls.has(raw)) return
+    if (hostLimit > 0) {
+      let host = ''
+      try {
+        host = new URL(raw).host
+      } catch {
+        return
+      }
+      const used = perHost.get(host) ?? 0
+      if (used >= hostLimit) return
+      perHost.set(host, used + 1)
+    }
+    seenUrls.add(raw)
+    resourceUrls.push(raw)
+  }
+
+  try {
+    const entries = performance.getEntriesByType('resource')
+    for (let i = 0; i < entries.length; i++) take(entries[i]?.name, 0)
+  } catch {
+    // Resource Timing is unavailable in a few embedded contexts.
+  }
+
+  try {
+    const links = document.querySelectorAll('link[href]')
+    for (let i = 0; i < links.length; i++) {
+      const node = links[i] as HTMLLinkElement | undefined
+      if (!node) continue
+      const rel = (node.getAttribute('rel') ?? '').toLowerCase()
+      if (
+        rel.indexOf('stylesheet') < 0 &&
+        rel.indexOf('preconnect') < 0 &&
+        rel.indexOf('dns-prefetch') < 0 &&
+        rel.indexOf('preload') < 0 &&
+        rel.indexOf('modulepreload') < 0
+      ) {
+        continue
+      }
+      take(node.href, 0)
+    }
+  } catch {
+    // Same.
+  }
+
+  try {
+    const images = document.querySelectorAll('img[src]')
+    for (let i = 0; i < images.length; i++) take((images[i] as HTMLImageElement).src, 3)
+  } catch {
+    // Same.
+  }
+
+  try {
+    const frames = document.querySelectorAll('iframe[src]')
+    for (let i = 0; i < frames.length; i++) take((frames[i] as HTMLIFrameElement).src, 4)
+  } catch {
+    // Same.
+  }
+
+  return { scripts, metas, domMatches, storageKeys, html, inlineScripts, resourceUrls }
 }
 
 /**

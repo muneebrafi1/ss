@@ -6,7 +6,8 @@ import {
   formatExport,
   type ExportFormat,
 } from '@/lib/export'
-import { downloadShareCard, renderShareCard } from '@/lib/share-image'
+import { downloadShareCard, renderShareCard, type ShareFormat } from '@/lib/share-image'
+import { stackSummary } from '@/lib/summary'
 import { sendMessage, type PanelState } from '@/messages'
 import { Button, EmptyPanel, Page, Toast, useToast } from '@/ui/Page'
 import { TechList } from '@/ui/TechList'
@@ -15,12 +16,19 @@ import { TechList } from '@/ui/TechList'
  * The current site's stack as a full page.
  *
  * Everything the panel shows, with the room to read it: descriptions visible
- * rather than on hover, a preview of the share card, and exports without a
- * dropdown. This is where someone goes to study a stack rather than glance at
- * one.
+ * rather than on hover, a preview of the share card in either shape, and
+ * exports without a dropdown. This is where someone goes to study a stack
+ * rather than glance at one.
  */
+
+const FORMATS: { id: ShareFormat; label: string; hint: string }[] = [
+  { id: 'landscape', label: 'Wide', hint: 'X, LinkedIn, Slack' },
+  { id: 'square', label: 'Square', hint: 'Instagram, LinkedIn feed' },
+]
+
 export function ReportApp() {
   const [state, setState] = useState<PanelState | null>(null)
+  const [format, setFormat] = useState<ShareFormat>('landscape')
   const [preview, setPreview] = useState<string | null>(null)
   const [toast, flash] = useToast()
 
@@ -35,32 +43,39 @@ export function ReportApp() {
   // preview is the actual output rather than an impression of it.
   useEffect(() => {
     if (!state?.detections.length) return
+    let stale = false
     void (async () => {
-      const canvas = await renderShareCard(state.hostname, state.detections)
-      setPreview(canvas.toDataURL('image/png'))
+      const canvas = await renderShareCard({
+        hostname: state.hostname,
+        url: state.url,
+        detections: state.detections,
+        format,
+      })
+      if (!stale) setPreview(canvas.toDataURL('image/png'))
     })()
-  }, [state])
+    return () => {
+      stale = true
+    }
+  }, [state, format])
 
-  function exportAs(format: ExportFormat) {
+  function exportAs(exportFormat: ExportFormat) {
     if (!state) return
     downloadText(
-      `${state.hostname || 'stack'}.${FILE_EXTENSION[format]}`,
-      formatExport(format, state.hostname, state.detections),
+      `${state.hostname || 'stack'}.${FILE_EXTENSION[exportFormat]}`,
+      formatExport(exportFormat, state.hostname, state.detections),
     )
   }
 
   const detections = state?.detections ?? []
   const unsupported = state && state.status !== 'ready'
+  const summary = stackSummary(detections)
+  const countLabel = `${detections.length} ${detections.length === 1 ? 'technology' : 'technologies'}`
 
   return (
     <Page
       current="report"
       title={state?.hostname || 'This site'}
-      subtitle={
-        unsupported
-          ? undefined
-          : `${detections.length} ${detections.length === 1 ? 'technology' : 'technologies'} detected`
-      }
+      subtitle={unsupported ? undefined : summary ? `${summary} · ${countLabel}` : countLabel}
       actions={
         detections.length > 0 ? (
           <>
@@ -75,10 +90,16 @@ export function ReportApp() {
             </Button>
             <Button onClick={() => exportAs('markdown')}>Markdown</Button>
             <Button onClick={() => exportAs('json')}>JSON</Button>
-            <Button onClick={() => exportAs('csv')}>CSV</Button>
             <Button
               variant="primary"
-              onClick={() => void downloadShareCard(state?.hostname ?? '', detections)}
+              onClick={() =>
+                void downloadShareCard({
+                  hostname: state?.hostname ?? '',
+                  url: state?.url,
+                  detections,
+                  format,
+                })
+              }
             >
               Download image
             </Button>
@@ -104,18 +125,43 @@ export function ReportApp() {
         />
       ) : (
         <>
-          {preview && (
-            <figure className="mb-8">
+          <figure className="mb-8">
+            <div className="mb-3 flex items-center gap-1">
+              {FORMATS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  title={option.hint}
+                  onClick={() => setFormat(option.id)}
+                  className={`rounded-btn px-2.5 py-1 text-[12px] font-medium transition-colors ${
+                    format === option.id
+                      ? 'bg-card text-ink dark:bg-card-dark dark:text-ink-dark'
+                      : 'text-muted hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            {preview ? (
               <img
                 src={preview}
                 alt={`Stack card for ${state.hostname}`}
-                className="w-full rounded-card border border-line dark:border-line-dark"
+                className={`rounded-card border border-line dark:border-line-dark ${
+                  format === 'square' ? 'w-full max-w-[420px]' : 'w-full'
+                }`}
               />
-              <figcaption className="mt-2 text-[12px] text-muted dark:text-muted-dark">
-                Shareable card — the same image the panel copies.
-              </figcaption>
-            </figure>
-          )}
+            ) : (
+              <div
+                className={`rounded-card border border-line bg-card dark:border-line-dark dark:bg-card-dark ${
+                  format === 'square' ? 'aspect-square w-full max-w-[420px]' : 'aspect-[1200/630]'
+                }`}
+              />
+            )}
+            <figcaption className="mt-2 text-[12px] text-muted dark:text-muted-dark">
+              Shareable card — the same image the panel copies.
+            </figcaption>
+          </figure>
 
           <TechList
             items={detections.map((detection) => ({

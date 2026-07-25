@@ -42,7 +42,15 @@ export function matchSignal(signal: Signal, evidence: Evidence): boolean {
       return evidence.storageKeys.some((k) => signal.pattern.test(k))
 
     case 'html':
-      return signal.pattern.test(evidence.html)
+      // Inline script text is searched alongside the HTML sample. Many services
+      // appear only in a snippet the site pastes into its own markup, and on a
+      // real page that snippet sits past the point where `html` is truncated.
+      return (
+        signal.pattern.test(evidence.html) ||
+        // Optional-chained: fixtures captured before this field existed replay
+        // through the same engine and must not throw.
+        (evidence.inlineScripts ?? []).some((s) => signal.pattern.test(s))
+      )
 
     case 'bundle':
       // Only meaningful once the user has opted into a deep scan.

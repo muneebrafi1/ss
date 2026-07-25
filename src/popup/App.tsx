@@ -248,6 +248,7 @@ export function App() {
 
       <Footer
         hostname={state.hostname}
+        url={state.url}
         detections={detections}
         deepScanned={state.deepScanned}
         scanning={scanning}

@@ -9,8 +9,6 @@ import type { HistoryEntry } from '@/background/history'
  */
 
 export type ScanStatus =
-  /** Evidence is still being gathered for this page. */
-  | 'scanning'
   /** Detection finished. */
   | 'ready'
   /** Scanning is switched off for this site or globally. */
@@ -27,8 +25,6 @@ export interface PanelState {
   url: string
   detections: Detection[]
   deepScanned: boolean
-  /** False when the current site is on the disabled list. */
-  hostEnabled: boolean
   settings: Settings
 }
 

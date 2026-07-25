@@ -1,16 +1,23 @@
 import { CATEGORY_BY_ID } from '@/fingerprints'
 import type { Detection } from '@/types'
+import { STACKLENS_NAME } from './brand'
 import { groupDetections } from './grouping'
+import { stackSummary } from './summary'
 
 /**
  * Export formats.
  *
- * Confidence is deliberately absent from all three. It is an internal filter
- * that decides what appears at all, and exporting it would reintroduce exactly
- * the uncertainty signal the panel is designed not to show.
+ * Two, not three. A single site's stack is around fifteen rows, which nobody
+ * opens in a spreadsheet — Markdown covers pasting it somewhere a person will
+ * read it, JSON covers feeding it to something that won't, and a third path to
+ * the same data only added an item to every export menu.
+ *
+ * Confidence is deliberately absent from both. It is an internal filter that
+ * decides what appears at all, and exporting it would reintroduce exactly the
+ * uncertainty signal the panel is designed not to show.
  */
 
-export type ExportFormat = 'markdown' | 'json' | 'csv'
+export type ExportFormat = 'markdown' | 'json'
 
 function categoryName(id: string): string {
   return CATEGORY_BY_ID.get(id as never)?.name ?? id
@@ -24,6 +31,11 @@ export function toMarkdown(hostname: string, detections: Detection[]): string {
   const { open, collapsed } = groupDetections(detections)
   const lines = [`# ${hostname || 'Tech stack'}`, '']
 
+  // The takeaway first: a pasted export should lead with the sentence, not with
+  // a heading and a bullet list the reader has to assemble themselves.
+  const summary = stackSummary(detections)
+  if (summary) lines.push(summary, '')
+
   for (const group of [...open, ...collapsed]) {
     lines.push(`## ${group.category.name}`, '')
     for (const detection of group.detections) {
@@ -32,7 +44,7 @@ export function toMarkdown(hostname: string, detections: Detection[]): string {
     lines.push('')
   }
 
-  lines.push(`_${detections.length} technologies detected by StackLens._`)
+  lines.push(`_${detections.length} technologies detected by ${STACKLENS_NAME}._`)
   return lines.join('\n')
 }
 
@@ -40,6 +52,7 @@ export function toJson(hostname: string, detections: Detection[]): string {
   return JSON.stringify(
     {
       site: hostname,
+      summary: stackSummary(detections),
       count: detections.length,
       technologies: detections.map((detection) => ({
         name: detection.name,
@@ -54,25 +67,6 @@ export function toJson(hostname: string, detections: Detection[]): string {
   )
 }
 
-export function toCsv(_hostname: string, detections: Detection[]): string {
-  const escape = (value: string) => `"${value.replace(/"/g, '""')}"`
-  const rows = [['Name', 'Category', 'Version', 'Description', 'Website'].join(',')]
-
-  for (const detection of detections) {
-    rows.push(
-      [
-        escape(detection.name),
-        escape(categoryName(detection.category)),
-        escape(detection.version ?? ''),
-        escape(detection.description),
-        escape(detection.url),
-      ].join(','),
-    )
-  }
-
-  return rows.join('\n')
-}
-
 export function formatExport(
   format: ExportFormat,
   hostname: string,
@@ -83,15 +77,12 @@ export function formatExport(
       return toMarkdown(hostname, detections)
     case 'json':
       return toJson(hostname, detections)
-    case 'csv':
-      return toCsv(hostname, detections)
   }
 }
 
 export const FILE_EXTENSION: Record<ExportFormat, string> = {
   markdown: 'md',
   json: 'json',
-  csv: 'csv',
 }
 
 export async function copyToClipboard(text: string): Promise<boolean> {

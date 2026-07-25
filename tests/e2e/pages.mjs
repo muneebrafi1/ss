@@ -78,11 +78,24 @@ try {
     check('lists technologies', body?.includes('Stripe') ?? false)
     check('shows descriptions, unlike the panel', body?.includes('Payments, billing') ?? false)
     check('renders the share card preview', (await page.$('figure img')) !== null)
-    check('offers exports', body?.includes('Markdown') && body?.includes('CSV'))
+    check('offers exports', (body?.includes('Markdown') && body?.includes('JSON')) ?? false)
+    check(
+      'leads with the stack summary rather than a bare count',
+      /on Vercel with/.test(body ?? ''),
+      body?.slice(0, 120).replace(/\s+/g, ' ').trim(),
+    )
     check(
       'states what it cannot see',
       body?.includes('cannot be seen from the') ?? false,
     )
+
+    // The two card shapes share one drawing path; switching must actually
+    // re-render rather than leave the previous aspect ratio on screen.
+    const wide = await page.getAttribute('figure img', 'src')
+    await page.click('button:has-text("Square")')
+    await page.waitForTimeout(1200)
+    const square = await page.getAttribute('figure img', 'src')
+    check('switching card format re-renders the preview', !!square && square !== wide)
     await page.screenshot({ path: resolve(root, 'screenshots/page-report.png'), fullPage: false })
     await page.close()
   }

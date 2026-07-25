@@ -26,8 +26,10 @@ Two halves, deliberately separated.
 ```
 webRequest observer  ─┐
 response headers     ─┤
-cookie names         ─┼─→ Evidence ─→ match ─→ score ─→ filter(≥0.60) ─→ panel
-DOM probe            ─┤              (fingerprint DB)                     export
+cookie names         ─┤
+DOM probe            ─┼─→ Evidence ─→ match ─→ score ─→ filter(≥0.60) ─→ panel
+resource timing      ─┤              (fingerprint DB)                     export
+declared URLs        ─┤                                                   share card
 MAIN-world probe     ─┤
 deep scan (opt-in)   ─┘
 ```
@@ -63,6 +65,36 @@ the filter instead of a label** — anything below `0.60` is dropped silently
 rather than shown with a caveat. The panel is shorter and more trustworthy, and
 the empty state carries the honesty the badges would have.
 
+### Seeing what the page actually loaded
+
+The webRequest observer is not the whole story, and relying on it alone was the
+source of two separate bugs. MV3 starts a service worker on demand, so a
+navigation that begins before the listeners are live has its events dropped
+outright — which once silently deleted the entire Hosting category while
+everything else looked fine.
+
+So the in-page probe also reads:
+
+- **`performance.getEntriesByType('resource')`** — the page's own complete
+  record of what it fetched, held by the page rather than by this extension, and
+  therefore immune to when the worker happened to wake up.
+- **URLs declared in markup** — `<link>` (including `preconnect` and
+  `dns-prefetch`), `<img>` and `<iframe>` sources. `preconnect` is the
+  interesting one: it names a host *before* anything is fetched from it, so a
+  checkout or embed provider is identified on a page where the widget was never
+  opened.
+- **Inline `<script>` text** — many services appear only in a snippet the site
+  pastes into its own markup, and on a real page that snippet sits past the
+  point where the HTML sample is truncated.
+
+All of it lands in the existing `requests` and `html` matching paths, so the
+383-entry database gains reach without a single entry being rewritten.
+
+Subresource response headers are deliberately **not** collected. A `cf-ray` on a
+font file says who serves that font, not who hosts the site; folding those in
+would attribute Cloudflare to every site that loads one Cloudflare-fronted
+script. More data, worse answers.
+
 ### What it genuinely cannot see
 
 Most production sites call model APIs from their backend, so the browser never
@@ -88,7 +120,7 @@ src/
   technologies/         searchable catalogue of everything detectable
   options/  welcome/    settings and first-run pages
   ui/                   shared page frame, list, error boundary
-  lib/                  grouping, export, share image
+  lib/                  grouping, summary, export, share image, brand
 tests/
   *.test.ts             unit + fixture replay
   e2e/                  run · functions · pages — real extension in real Chrome
@@ -102,7 +134,7 @@ landing/                one-page site
 | Surface | Purpose |
 |---|---|
 | **Panel** (toolbar, `Alt+Shift+S`) | What is this site, at a glance |
-| **Report** | The same stack as a full page: descriptions visible, share-card preview, exports |
+| **Report** | The same stack as a full page: descriptions visible, share-card preview in both shapes, exports |
 | **History** | What every site you visited was built with. Local only, searchable, clearable |
 | **Technologies** | The whole detectable catalogue, searchable and filterable by category |
 | **Settings** | Scanning and history switches, per-site exceptions, the privacy position |
@@ -164,11 +196,20 @@ involved.
 Chrome. `run.mjs` drives the panel across six shapes of website — a modern AI SaaS, a WordPress blog with
 WooCommerce, a Shopify store, a single-page app, a bare HTML page, and a page
 that refuses script downloads — plus the per-site off switch and an unsupported
-page. `functions.mjs` exercises every user-facing action — the share image is
-downloaded and measured to prove it is not a blank canvas, and each export is
-opened and read. `pages.mjs` clicks through the report, history, technologies and
-settings pages. 105 browser checks in all, including the privacy guarantee that
-no cookie value is ever stored.
+page. `functions.mjs` exercises every user-facing action — both share-card
+formats are downloaded, measured, and checked for drawn content in the footer
+band as well as overall, and each export is opened and read. `pages.mjs` clicks
+through the report, history, technologies and settings pages. 117 browser checks
+in all, including the privacy guarantee that no cookie value is ever stored.
+
+Three of those checks exist to prove the widened collection is real rather than
+incidental, each isolating a path nothing else could reach:
+
+| Fixture | Signal | Reachable only by |
+|---|---|---|
+| modern | Segment | a `<link rel="preconnect">` that fetches nothing at all |
+| shopify | Google Tag Manager | an inline script 279,000 characters into the page, past the HTML cut |
+| spa | Cloudinary, Calendly | an `<img>` and an `<iframe>` declared in markup |
 
 Chrome is launched with `--host-resolver-rules` mapping every hostname to the
 fixture server, so the page genuinely requests `api.openai.com` and the

@@ -25,8 +25,11 @@ import { emptyEvidence, type Evidence } from '@/types'
 const DEBOUNCE_MS = 250
 
 /** Caps keep a long-lived tab from growing without bound. */
-const MAX_REQUESTS = 500
+// Raised from 500 now that the page's own Resource Timing list and its markup
+// URLs feed this alongside the webRequest observer.
+const MAX_REQUESTS = 800
 const MAX_HTML_CHARS = 250_000
+const MAX_INLINE_SCRIPT_CHARS = 120_000
 const MAX_BUNDLE_CHARS = 3_000_000
 
 const keyFor = (tabId: number) => `tab:${tabId}`
@@ -129,6 +132,21 @@ function merge(base: Evidence, patch: Partial<Evidence>): Evidence {
   }
   if (patch.html !== undefined) {
     next.html = patch.html.slice(0, MAX_HTML_CHARS)
+  }
+  if (patch.inlineScripts !== undefined) {
+    // Replaced rather than accumulated: the probe re-reads the whole document
+    // each time it runs, so merging would stack duplicates of the same page.
+    const kept: string[] = []
+    let total = 0
+    for (const script of patch.inlineScripts) {
+      if (total >= MAX_INLINE_SCRIPT_CHARS) break
+      const slice = script.slice(0, MAX_INLINE_SCRIPT_CHARS - total)
+      kept.push(slice)
+      total += slice.length
+    }
+    next.inlineScripts = kept
+  } else {
+    next.inlineScripts = base.inlineScripts ?? []
   }
   if (patch.bundles?.length) {
     const bundles = [...base.bundles]

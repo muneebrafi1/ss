@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { detect } from '@/engine'
 import { DATABASE_FINGERPRINTS } from '@/fingerprints'
 import { groupDetections } from '@/lib/grouping'
-import { formatExport, toCsv, toJson, toMarkdown } from '@/lib/export'
+import { formatExport, toJson, toMarkdown } from '@/lib/export'
+import { stackSummary } from '@/lib/summary'
 import type { Evidence } from '@/types'
 import fixture from './fixtures/fixture-site.json'
 
@@ -134,23 +135,47 @@ describe('exports', () => {
     expect(parsed.technologies[0]).not.toHaveProperty('confidence')
   })
 
-  it('writes csv with a header row and one line per technology', () => {
-    const lines = toCsv('app.fixture.test', detections).split('\n')
-    expect(lines[0]).toBe('Name,Category,Version,Description,Website')
-    expect(lines.length).toBe(detections.length + 1)
-  })
-
-  it('escapes quotes in csv rather than corrupting the row', () => {
-    const csv = toCsv('x', [
-      { ...detections[0]!, name: 'A "quoted" name', description: 'has, a comma' },
-    ])
-    expect(csv).toContain('"A ""quoted"" name"')
-    expect(csv).toContain('"has, a comma"')
+  it('leads the markdown with the summary sentence', () => {
+    const summary = stackSummary(detections)
+    expect(summary).not.toBeNull()
+    const lines = toMarkdown('app.fixture.test', detections).split('\n')
+    expect(lines[0]).toBe('# app.fixture.test')
+    expect(lines[2]).toBe(summary)
   })
 
   it('routes every format through one entry point', () => {
-    for (const format of ['markdown', 'json', 'csv'] as const) {
+    for (const format of ['markdown', 'json'] as const) {
       expect(formatExport(format, 'app.fixture.test', detections).length).toBeGreaterThan(0)
     }
+  })
+})
+
+describe('stack summary', () => {
+  const detections = detect(evidence, DATABASE_FINGERPRINTS)
+
+  it('names the framework, the host and two companions', () => {
+    // The captured fixture is a Next.js app on Vercel with Supabase and Clerk.
+    expect(stackSummary(detections)).toBe('Next.js on Vercel with Supabase and Clerk')
+  })
+
+  it('says nothing when there is nothing to say', () => {
+    expect(stackSummary([])).toBeNull()
+  })
+
+  it('names what there is when nothing structural was found', () => {
+    const loose = detections.filter((d) => d.category === 'analytics' || d.category === 'chat')
+    expect(loose.length).toBeGreaterThan(2)
+    // No framework, host, CMS or backend: it lists rather than inventing a shape.
+    expect(stackSummary(loose)).toMatch(/^\d+ tools including .+ and .+$/)
+  })
+
+  it('describes a store as a store', () => {
+    const shop = detections.map((detection, i) =>
+      i === 0
+        ? { ...detection, category: 'ecommerce' as const, name: 'Shopify', id: 'shopify' }
+        : detection,
+    )
+    const onlyShop = shop.filter((d) => d.category === 'ecommerce' || d.category === 'hosting')
+    expect(stackSummary(onlyShop)).toMatch(/^Shopify store/)
   })
 })

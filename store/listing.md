@@ -56,6 +56,8 @@ loaded.
 **More than a popup**
 
 - **Panel** — what this site is, at a glance
+- **Share card** — the stack as a designed image, wide or square, with a one-line
+  summary of what the site is built on
 - **Full report** — the same stack as a page, with descriptions and exports
 - **History** — every site you visit and what it uses, searchable, on your device only
 - **Technologies** — browse everything StackLens can detect

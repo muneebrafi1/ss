@@ -158,7 +158,20 @@ export async function runProbes(tabId: number): Promise<void> {
       func: domProbe,
       args: [DOM_SELECTORS],
     })
-    if (result?.result) recordEvidence(tabId, result.result)
+    if (result?.result) {
+      // The probe cannot call `normalizeRequest` — it is serialized and has no
+      // module scope — so it hands back raw URLs and they are normalized here,
+      // through the same function the webRequest listener uses. One
+      // implementation, so the two paths cannot drift into producing strings
+      // that match different patterns.
+      const { resourceUrls, ...evidence } = result.result
+      const requests: string[] = []
+      for (const url of resourceUrls) {
+        const request = normalizeRequest(url)
+        if (request) requests.push(request)
+      }
+      recordEvidence(tabId, { ...evidence, requests })
+    }
   } catch {
     // Injection is not permitted on this page.
   }

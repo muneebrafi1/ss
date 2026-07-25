@@ -236,7 +236,6 @@ async function buildPanelState({ refresh = false } = {}): Promise<PanelState> {
     url,
     detections: [] as Detection[],
     deepScanned: false,
-    hostEnabled: isHostEnabled(settings, hostname),
     settings,
   }
 

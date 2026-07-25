@@ -46,18 +46,26 @@ export function WelcomeApp() {
         ))}
       </ol>
 
-      <div className="mt-12 flex flex-wrap items-center gap-3">
-        <a
-          href="https://vercel.com"
-          target="_blank"
-          rel="noreferrer"
-          className="rounded-btn bg-ink px-4 py-2 text-[13px] font-medium text-bg transition-opacity hover:opacity-90 dark:bg-ink-dark dark:text-bg-dark"
-        >
-          Try it on a site
-        </a>
-        <span className="text-[13px] text-muted dark:text-muted-dark">
-          Then click the StackLens icon.
-        </span>
+      {/*
+        No "try it on this site" button here. It sent a brand-new user off to a
+        third party's homepage, which is both a strange first act for a tool
+        that has just been installed and indistinguishable from a placement.
+        Any site works; saying so is enough.
+      */}
+      <div className="mt-12 rounded-card border border-line px-4 py-3 dark:border-line-dark">
+        <p className="text-[13px] text-muted dark:text-muted-dark">
+          Open any website in a new tab and click the StackLens icon — or press{' '}
+          <kbd className="rounded-[4px] border border-line px-1.5 py-0.5 font-sans text-[12px] text-ink dark:border-line-dark dark:text-ink-dark">
+            Alt
+          </kbd>{' '}
+          <kbd className="rounded-[4px] border border-line px-1.5 py-0.5 font-sans text-[12px] text-ink dark:border-line-dark dark:text-ink-dark">
+            Shift
+          </kbd>{' '}
+          <kbd className="rounded-[4px] border border-line px-1.5 py-0.5 font-sans text-[12px] text-ink dark:border-line-dark dark:text-ink-dark">
+            S
+          </kbd>
+          .
+        </p>
       </div>
 
       <section className="mt-16 border-t border-line pt-6 dark:border-line-dark">

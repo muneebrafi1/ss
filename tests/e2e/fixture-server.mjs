@@ -44,6 +44,13 @@ const MODERN_REQUESTS = [
 
 const MODERN_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>Fixture app</title>
+<!--
+  Segment appears ONLY as a preconnect. A preconnect opens a connection and
+  fetches nothing, so neither the webRequest observer nor Resource Timing will
+  ever see it — detecting Segment here proves the probe is reading declared
+  resource hosts out of the markup, which is the whole point of collecting them.
+-->
+<link rel="preconnect" href="http://cdn.segment.com">
 <script src="/_next/static/chunks/main-app.js"></script>
 <script src="http://js.stripe.com/v3"></script>
 <script src="http://static.hotjar.com/c/hotjar-123.js"></script>
@@ -102,12 +109,26 @@ fetch("/wp-json/wp/v2/posts", {mode:"no-cors"}).catch(function(){});
 /* A Shopify store: Shop Pay, Klaviyo, Gorgias, consent banner                */
 /* -------------------------------------------------------------------------- */
 
+/*
+ * Filler long enough to push what follows it past the 250,000-character HTML
+ * sample. Real theme markup routinely runs this long, and it is exactly why
+ * inline script text is collected separately: the tag manager snippet below
+ * sits after the cut, so it is invisible to any `html` signal that only sees
+ * the truncated document.
+ */
+const SHOPIFY_FILLER = `<!-- ${'shopify liquid section markup. '.repeat(9000)} -->`
+
 const SHOPIFY_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>Fixture store</title>
 <script src="http://cdn.shopify.com/s/files/1/assets/theme.js"></script>
 <script src="http://static.klaviyo.com/onsite/js/klaviyo.js"></script>
 <script src="http://config.gorgias.chat/bundle-loader.js"></script>
-</head><body><h1>Store</h1></body></html>`
+</head><body><h1>Store</h1>
+${SHOPIFY_FILLER}
+<script>
+  var gtmFrame = "http://www.googletagmanager.com/ns.html?id=GTM-FIXTURE";
+</script>
+</body></html>`
 
 const SHOPIFY_BUNDLE = `
 window.Shopify = { shop: "fixture.myshopify.com", theme: { id: 1 } };
@@ -124,7 +145,10 @@ fetch("http://monorail-edge.shopifysvc.com/v1/produce", {mode:"no-cors"}).catch(
 
 const SPA_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>Fixture SPA</title><script src="/app.js"></script>
-</head><body><div id="root"><div data-v-app></div></div></body></html>`
+</head><body><div id="root"><div data-v-app></div>
+<img src="http://res.cloudinary.com/demo/image/upload/hero.jpg" alt="">
+<iframe src="http://calendly.com/fixture/30min" title="Book a call"></iframe>
+</div></body></html>`
 
 const SPA_BUNDLE = `
 window.Vue = { version: "3.5.13" };

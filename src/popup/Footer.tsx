@@ -96,6 +96,7 @@ function Menu({
  */
 export function Footer({
   hostname,
+  url,
   detections,
   deepScanned,
   scanning,
@@ -103,6 +104,8 @@ export function Footer({
   onDeepScan,
 }: {
   hostname: string
+  /** Full page URL — the share card uses it to look up the site's favicon. */
+  url: string
   detections: Detection[]
   deepScanned: boolean
   scanning: boolean
@@ -148,7 +151,9 @@ export function Footer({
         active={scanning || (deepScanned && (scanGain ?? 0) > 0)}
         title={
           deepScanned
-            ? 'Deep scan already run for this page'
+            ? scanGain === 0
+              ? "This site's JavaScript held nothing StackLens could not already see"
+              : 'Deep scan already run for this page'
             : "Download and search this site's JavaScript for more tools"
         }
       >
@@ -193,7 +198,6 @@ export function Footer({
               },
               { label: 'Download Markdown', run: () => exportAs('markdown') },
               { label: 'Download JSON', run: () => exportAs('json') },
-              { label: 'Download CSV', run: () => exportAs('csv') },
             ]}
           />
         )}
@@ -218,11 +222,19 @@ export function Footer({
               {
                 label: 'Copy image',
                 run: () =>
-                  void copyShareCard(hostname, detections).then((ok) =>
+                  void copyShareCard({ hostname, url, detections }).then((ok) =>
                     flash(ok ? 'Image copied' : 'Copy failed'),
                   ),
               },
-              { label: 'Download image', run: () => void downloadShareCard(hostname, detections) },
+              {
+                label: 'Download wide',
+                run: () => void downloadShareCard({ hostname, url, detections }),
+              },
+              {
+                label: 'Download square',
+                run: () =>
+                  void downloadShareCard({ hostname, url, detections, format: 'square' }),
+              },
             ]}
           />
         )}

@@ -127,6 +127,14 @@ try {
       check(`detects ${expected}`, names.some((n) => n.startsWith(expected)))
     }
     check('reads the Next.js version', names.includes('Next.js 15.1.0'))
+    // Segment is declared only as `<link rel="preconnect">`. A preconnect opens
+    // a connection and fetches nothing, so it appears in neither the webRequest
+    // log nor Resource Timing — detecting it proves resource hosts are being
+    // read out of the page's markup.
+    check(
+      'detects a host declared only by preconnect (Segment)',
+      names.some((n) => n.startsWith('Segment')),
+    )
     for (const absent of ['WordPress', 'Shopify', 'Auth0', 'Drupal']) {
       check(`no false positive: ${absent}`, !names.some((n) => n.startsWith(absent)))
     }
@@ -156,6 +164,11 @@ try {
 
     const evidence = await evidenceFor(tabId)
     check('response headers captured', Object.keys(evidence?.responseHeaders ?? {}).length > 0)
+    check(
+      "the page's own resource list is collected",
+      (evidence?.requests ?? []).some((r) => r.startsWith('js.stripe.com')),
+      `${(evidence?.requests ?? []).length} requests`,
+    )
     check('cookie names read', (evidence?.cookieNames ?? []).length > 0)
     check(
       'no cookie VALUES stored anywhere',
@@ -189,12 +202,27 @@ try {
   /* ====================================================================== */
   console.log('\n=== 3. Shopify store ===')
   {
-    const { popup } = await inspect(SITES.shopify)
+    const { popup, tabId } = await inspect(SITES.shopify)
     const names = await readCards(popup)
     console.log(`  detected (${names.length}): ${names.join(', ')}`)
     for (const expected of ['Shopify', 'Cloudflare', 'Klaviyo', 'Gorgias']) {
       check(`detects ${expected}`, names.some((n) => n.startsWith(expected)))
     }
+
+    // The tag manager snippet on this page sits after 279,000 characters of
+    // theme markup, well past where the HTML sample is truncated. It can only
+    // be found by reading inline script text separately.
+    const evidence = await evidenceFor(tabId)
+    check(
+      'the HTML sample really is truncated before the snippet',
+      !(evidence?.html ?? '').includes('googletagmanager.com/ns.html'),
+      `${(evidence?.html ?? '').length} chars`,
+    )
+    check(
+      'detects a tool named only in an inline script past the HTML cut',
+      names.some((n) => n.startsWith('Google Tag Manager')),
+    )
+
     for (const absent of ['WordPress', 'Next.js', 'Django']) {
       check(`no false positive: ${absent}`, !names.some((n) => n.startsWith(absent)))
     }
@@ -239,6 +267,9 @@ try {
     const { page, popup, tabId } = await inspect(SITES.spa, { settle: 1500 })
     const before = await readCards(popup)
     check('detects the SPA framework', before.some((n) => n.startsWith('Vue')), before.join(', '))
+    // Declared in markup as an <img> and an <iframe> respectively.
+    check('detects a host used only by an image', before.some((n) => n.startsWith('Cloudinary')))
+    check('detects a host used only by an iframe', before.some((n) => n.startsWith('Calendly')))
 
     // Client-side route change: no new document, so the stack is unchanged and
     // evidence must survive rather than being wiped.

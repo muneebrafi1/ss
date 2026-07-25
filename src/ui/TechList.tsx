@@ -1,6 +1,5 @@
 import { CATEGORIES } from '@/fingerprints'
 import { ToolLogo } from '@/popup/ToolLogo'
-import type { CategoryId } from '@/types'
 
 /**
  * A category-grouped list of technologies for the full-page views.
@@ -109,6 +108,3 @@ export function TechList({ items, emptyLabel }: { items: TechItem[]; emptyLabel?
     </div>
   )
 }
-
-export const isCategoryId = (value: string): value is CategoryId =>
-  CATEGORIES.some((category) => category.id === value)

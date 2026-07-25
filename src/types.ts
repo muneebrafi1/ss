@@ -130,7 +130,15 @@ export interface Fingerprint {
 export interface Evidence {
   url: string
   hostname: string
-  /** Deduped "hostname/path" strings for every request the page made. */
+  /**
+   * Deduped "hostname/path" strings for everything the page loaded.
+   *
+   * Fed from three places: the webRequest observer, the page's own Resource
+   * Timing list, and the URLs declared in markup (`<link>`, `<img>`,
+   * `<iframe>`). The last two matter because a service worker that was asleep
+   * when the navigation began misses events outright, while the page keeps a
+   * complete record either way.
+   */
   requests: string[]
   /** Lowercased main-document response headers. */
   responseHeaders: Record<string, string>
@@ -157,6 +165,15 @@ export interface Evidence {
   storageKeys: string[]
   /** Capped sample of document HTML. */
   html: string
+  /**
+   * Text of the page's inline `<script>` tags, capped.
+   *
+   * Kept apart from `html` rather than folded into it because the snippets that
+   * identify a service — a GTM container id, an Intercom settings object — sit
+   * far down a long document, past the point where the HTML sample is cut off.
+   * `html` signals are matched against both.
+   */
+  inlineScripts: string[]
   /** Deep-scanned JS bundle text. Empty until a deep scan runs. */
   bundles: string[]
   deepScanned: boolean
@@ -177,6 +194,7 @@ export function emptyEvidence(url = '', hostname = ''): Evidence {
     domMatches: [],
     storageKeys: [],
     html: '',
+    inlineScripts: [],
     bundles: [],
     deepScanned: false,
     collectedAt: 0,

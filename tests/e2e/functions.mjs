@@ -82,30 +82,53 @@ try {
     await popup.click('button:has-text("Share")')
     await popup.waitForTimeout(300)
     const menu = await popup.textContent('body')
-    check('share menu opens', menu?.includes('Download image') ?? false)
+    check('share menu opens', menu?.includes('Download wide') ?? false)
 
-    // Downloading writes a real PNG; capture and measure it.
-    const downloadPromise = popup.waitForEvent('download', { timeout: 15000 }).catch(() => null)
-    await popup.click('button:has-text("Download image")')
-    const download = await downloadPromise
-    check('share image downloads', !!download, download?.suggestedFilename())
+    const sharp = (await import('sharp')).default
+    const { readFile } = await import('node:fs/promises')
 
-    if (download) {
-      const path = await download.path()
-      const { readFile } = await import('node:fs/promises')
-      const bytes = await readFile(path)
-      check('share image is a PNG', bytes.subarray(1, 4).toString() === 'PNG')
-      check('share image is not blank', bytes.length > 8000, `${bytes.length} bytes`)
+    // Both aspect ratios, because the two formats share one drawing path and a
+    // layout constant wrong in only one of them would otherwise ship.
+    for (const [label, item, width, height] of [
+      ['wide', 'Download wide', 2400, 1260],
+      ['square', 'Download square', 2160, 2160],
+    ]) {
+      if (label !== 'wide') {
+        await popup.click('button:has-text("Share")')
+        await popup.waitForTimeout(300)
+      }
+      const downloadPromise = popup.waitForEvent('download', { timeout: 20000 }).catch(() => null)
+      await popup.click(`button:has-text("${item}")`)
+      const download = await downloadPromise
+      check(`${label} card downloads`, !!download, download?.suggestedFilename())
+      if (!download) continue
 
-      // A blank 1200x630 canvas compresses tiny; real artwork does not.
-      const sharp = (await import('sharp')).default
+      const bytes = await readFile(await download.path())
+      check(`${label} card is a PNG`, bytes.subarray(1, 4).toString() === 'PNG')
+      check(`${label} card is not blank`, bytes.length > 8000, `${bytes.length} bytes`)
+
       const meta = await sharp(bytes).metadata()
-      check('share image is 1200x630', meta.width === 1200 && meta.height === 630,
-        `${meta.width}x${meta.height}`)
+      check(
+        `${label} card is ${width}x${height}`,
+        meta.width === width && meta.height === height,
+        `${meta.width}x${meta.height}`,
+      )
+
+      // A blank canvas compresses tiny and has no channel spread; real artwork
+      // does. Checked over the whole card and again over the footer band alone,
+      // because a grid that renders while the signature does not is precisely
+      // the regression that makes the image useless as an advertisement.
       const stats = await sharp(bytes).stats()
       const spread = Math.max(...stats.channels.map((c) => c.max - c.min))
-      check('share image has drawn content', spread > 40, `channel spread ${spread}`)
-      await sharp(bytes).toFile(resolve(root, 'screenshots/share-card.png'))
+      check(`${label} card has drawn content`, spread > 40, `channel spread ${spread}`)
+
+      const footerBand = await sharp(bytes)
+        .extract({ left: 0, top: height - 150, width, height: 140 })
+        .stats()
+      const footerSpread = Math.max(...footerBand.channels.map((c) => c.max - c.min))
+      check(`${label} card has a signed footer`, footerSpread > 40, `footer spread ${footerSpread}`)
+
+      await sharp(bytes).toFile(resolve(root, `screenshots/share-card-${label}.png`))
     }
   }
 
@@ -113,7 +136,6 @@ try {
   for (const [label, format] of [
     ['Markdown', 'Download Markdown'],
     ['JSON', 'Download JSON'],
-    ['CSV', 'Download CSV'],
   ]) {
     await popup.click('button:has-text("Export")')
     await popup.waitForTimeout(250)
