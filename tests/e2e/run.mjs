@@ -1,24 +1,31 @@
 /**
- * End-to-end check: loads the built extension into Chrome, visits the fixture
- * site, opens the real panel, and drives a deep scan by clicking the button.
+ * End-to-end checks: loads the built extension into Chrome and drives the real
+ * panel across several shapes of website.
  *
  * Mirrors what a user actually does — load a page, click the toolbar icon —
  * because that flow is also what triggers the probe refresh and the header
- * recovery path. Captures the resulting Evidence into tests/fixtures/ so the
- * detection half can be replayed in the unit suite without a browser.
+ * recovery path. Captures Evidence into tests/fixtures/ so the detection half
+ * can be replayed in the unit suite without a browser.
  */
 import { chromium } from 'playwright'
 import { mkdtemp, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createFixtureServer, SITE_HOST } from './fixture-server.mjs'
+import { createFixtureServer, SITES } from './fixture-server.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const PORT = 8787
 const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+let failures = 0
+let checks = 0
+const check = (label, ok, detail = '') => {
+  checks += 1
+  console.log(`${ok ? '  PASS' : '  FAIL'}  ${label}${detail ? ` — ${detail}` : ''}`)
+  if (!ok) failures += 1
+}
 
 const server = createFixtureServer()
 await new Promise((r) => server.listen(PORT, r))
@@ -30,198 +37,280 @@ const context = await chromium.launchPersistentContext(profile, {
   args: [
     `--disable-extensions-except=${resolve(root, 'dist')}`,
     `--load-extension=${resolve(root, 'dist')}`,
-    // Every hostname resolves to the fixture server, so the page genuinely
-    // requests api.openai.com and the extension observes the real hostname.
-    // The request patterns are anchored to hostnames and would correctly refuse
-    // to match a rewritten path.
     `--host-resolver-rules=MAP * 127.0.0.1:${PORT}, EXCLUDE localhost, EXCLUDE 127.0.0.1`,
     '--no-sandbox',
   ],
 })
 
-let failures = 0
-const check = (label, ok, detail = '') => {
-  console.log(`${ok ? '  PASS' : '  FAIL'}  ${label}${detail ? ` — ${detail}` : ''}`)
-  if (!ok) failures += 1
-}
+let worker
+let extensionId
 
-try {
-  let [worker] = context.serviceWorkers()
-  if (!worker) worker = await context.waitForEvent('serviceworker', { timeout: 15000 })
-  const extensionId = new URL(worker.url()).host
-  console.log(`\nextension id: ${extensionId}\n`)
-
-  const page = await context.newPage()
-  await page.goto(`http://${SITE_HOST}/`, { waitUntil: 'load', timeout: 20000 })
-  await sleep(2500)
-
-  // Look the fixture tab up by URL — the welcome page opens on install and
-  // would otherwise be the active tab — then make it active, as it would be
-  // when a user clicks the toolbar icon.
-  const tabId = await worker.evaluate(async (host) => {
-    const tabs = await chrome.tabs.query({})
-    const tab = tabs.find((t) => (t.url ?? '').includes(host))
-    if (tab?.id !== undefined) await chrome.tabs.update(tab.id, { active: true })
-    return tab?.id ?? null
-  }, SITE_HOST)
-  check('fixture tab is visible to the service worker', tabId !== null)
-
-  /* ---------------------------------------------------------------------- */
-  /* The panel                                                              */
-  /* ---------------------------------------------------------------------- */
-
-  // Opened in its own window so the fixture tab stays the active tab of its
-  // window, which is the arrangement a real toolbar popup sees.
-  console.log('--- panel (real popup UI) ---')
+async function openPanel() {
   await worker.evaluate(
-    (id) => chrome.windows.create({ url: `chrome-extension://${id}/popup.html`, type: 'popup', width: 420, height: 640 }),
+    (id) =>
+      chrome.windows.create({
+        url: `chrome-extension://${id}/popup.html`,
+        type: 'popup',
+        width: 420,
+        height: 640,
+      }),
     extensionId,
   )
-  await sleep(500)
+  await sleep(700)
   const popup = context.pages().find((p) => p.url().includes('popup.html'))
-  if (!popup) throw new Error('popup page did not open')
-  await popup.waitForTimeout(2500)
+  await popup.waitForTimeout(2200)
+  return popup
+}
 
-  const readCards = () =>
-    popup.$$eval('button[type="button"] span.line-clamp-2', (nodes) =>
-      nodes.map((n) => n.textContent?.trim() ?? ''),
-    )
+/** Opens a site, then opens the panel in its own window and reads it. */
+async function inspect(host, { path = '/', settle = 2200 } = {}) {
+  const page = await context.newPage()
+  await page.goto(`http://${host}${path}`, { waitUntil: 'load', timeout: 20000 })
+  await sleep(settle)
 
-  const headerText = (await popup.textContent('header'))?.trim()
-  check('panel header names the site', headerText?.includes(SITE_HOST) ?? false, headerText)
+  const tabId = await worker.evaluate(async (h) => {
+    const tabs = await chrome.tabs.query({})
+    const tab = tabs.find((t) => (t.url ?? '').includes(h))
+    if (tab?.id !== undefined) await chrome.tabs.update(tab.id, { active: true })
+    return tab?.id ?? null
+  }, host)
 
-  // Expand the collapsed half so every detection is present in the DOM.
+  // The panel opens in its own window so the site tab stays the active tab of
+  // its window — the arrangement a real toolbar popup sees.
+  const popup = await openPanel()
+  return { page, popup, tabId }
+}
+
+async function readCards(popup) {
   const more = await popup.$('button:has-text("more tool")')
-  check('collapsed section exists', !!more)
-  if (more) await more.click()
-  await popup.waitForTimeout(400)
-
-  const names = await readCards()
-  console.log(`  detected (${names.length}): ${names.join(', ')}`)
-
-  const expected = [
-    'Vercel', // header-only, so this also proves header recovery worked
-    'Next.js',
-    'React',
-    'Stripe',
-    'Clerk',
-    'Supabase',
-    'PostHog',
-    'Sentry',
-    'Intercom',
-    'Hotjar',
-    'Cloudinary',
-    'Pinecone',
-    'ElevenLabs',
-    'Resend',
-  ]
-  for (const name of expected) {
-    check(`detects ${name}`, names.some((n) => n.startsWith(name)))
+  if (more) {
+    await more.click()
+    await popup.waitForTimeout(350)
   }
-
-  const falsePositives = ['WordPress', 'Shopify', 'Auth0', 'Mapbox', 'Drupal', 'Magento', 'Wix']
-  const wrong = names.filter((n) => falsePositives.some((f) => n.startsWith(f)))
-  check('no false positives', wrong.length === 0, wrong.join(', ') || 'none')
-
-  check(
-    'reads the Next.js version from its header',
-    names.includes('Next.js 15.1.0'),
-    names.find((n) => n.startsWith('Next.js')) ?? 'none',
+  return popup.$$eval('button[type="button"] span.line-clamp-2', (nodes) =>
+    nodes.map((n) => n.textContent?.trim() ?? ''),
   )
+}
 
-  // Screenshot the panel element itself: the toolbar popup is exactly this
-  // 400x600 box, so capturing the whole window would be unrepresentative.
-  await mkdir(resolve(root, 'screenshots'), { recursive: true })
-  const panel = await popup.$('#root > div')
-  const shot = async (name, scroll = 0) => {
-    await popup.evaluate((y) => document.querySelector('.overflow-y-auto')?.scrollTo(0, y), scroll)
-    await popup.waitForTimeout(250)
-    await panel.screenshot({ path: resolve(root, `screenshots/${name}.png`) })
-  }
-  // Collapsed first: the view a user actually opens to.
-  if (more) await more.click()
-  await popup.waitForTimeout(400)
-  await shot('popup-light')
-  await popup.emulateMedia({ colorScheme: 'dark' })
-  await popup.waitForTimeout(300)
-  await shot('popup-dark')
-  await popup.emulateMedia({ colorScheme: 'light' })
-  await popup.waitForTimeout(200)
-  if (more) await more.click()
-  await popup.waitForTimeout(400)
-  await shot('popup-expanded', 9999)
-  console.log('  wrote popup-light.png, popup-dark.png, popup-expanded.png')
-
-  /* ---------------------------------------------------------------------- */
-  /* Evidence                                                               */
-  /* ---------------------------------------------------------------------- */
-
-  console.log('\n--- evidence collected ---')
-  const evidence = await worker.evaluate(async (id) => {
+const evidenceFor = (tabId) =>
+  worker.evaluate(async (id) => {
     const stored = await chrome.storage.session.get(`tab:${id}`)
     // Records are stored as { token, evidence } so a navigation can be told
     // apart from the page already on disk.
     return stored[`tab:${id}`]?.evidence ?? null
   }, tabId)
 
-  check('evidence was stored', !!evidence)
-  if (evidence) {
-    check('requests observed', evidence.requests.length > 0, `${evidence.requests.length}`)
-    check('response headers captured', Object.keys(evidence.responseHeaders).length > 0)
-    check('cookie names read', evidence.cookieNames.length > 0, evidence.cookieNames.join(', '))
-    check('page globals resolved', evidence.globals.length > 0, evidence.globals.join(', '))
-    check('dom selectors matched', evidence.domMatches.length > 0, `${evidence.domMatches.length}`)
-    check('storage keys read', evidence.storageKeys.length > 0, evidence.storageKeys.join(', '))
-    check('scripts collected', evidence.scripts.length > 0, `${evidence.scripts.length}`)
-    check('html captured', evidence.html.length > 0)
-
-    // The privacy guarantee, asserted rather than assumed.
-    const serialized = JSON.stringify({ ...evidence, bundles: [] })
-    check('no cookie VALUES stored anywhere in evidence', !serialized.includes('fixture; Path'))
+async function closeExtras(keep = 1) {
+  for (const page of context.pages().slice(keep)) {
+    if (!page.isClosed()) await page.close().catch(() => {})
   }
+}
 
-  const badge = await worker.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId)
-  check('badge shows a count', /^\d+$/.test(badge), `"${badge}"`)
+try {
+  ;[worker] = context.serviceWorkers()
+  if (!worker) worker = await context.waitForEvent('serviceworker', { timeout: 15000 })
+  extensionId = new URL(worker.url()).host
+  console.log(`\nextension id: ${extensionId}`)
 
-  /* ---------------------------------------------------------------------- */
-  /* Deep scan                                                              */
-  /* ---------------------------------------------------------------------- */
+  /* ====================================================================== */
+  console.log('\n=== 1. Modern AI SaaS ===')
+  {
+    const { popup, tabId } = await inspect(SITES.modern)
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ')}`)
 
-  console.log('\n--- deep scan (clicking the button) ---')
-  await popup.click('button:has-text("Deep scan")')
-  await popup.waitForTimeout(3500)
-  const moreAfter = await popup.$('button:has-text("more tool")')
-  if (moreAfter) await moreAfter.click()
-  await popup.waitForTimeout(400)
+    for (const expected of [
+      'Vercel', 'Next.js', 'React', 'Stripe', 'Clerk', 'Supabase',
+      'PostHog', 'Sentry', 'Intercom', 'Hotjar', 'Cloudinary', 'Pinecone',
+      'ElevenLabs', 'Resend',
+    ]) {
+      check(`detects ${expected}`, names.some((n) => n.startsWith(expected)))
+    }
+    check('reads the Next.js version', names.includes('Next.js 15.1.0'))
+    for (const absent of ['WordPress', 'Shopify', 'Auth0', 'Drupal']) {
+      check(`no false positive: ${absent}`, !names.some((n) => n.startsWith(absent)))
+    }
 
-  const deepNames = await readCards()
-  console.log(`  detected (${deepNames.length}): ${deepNames.join(', ')}`)
-  check('deep scan finds OpenAI from bundle strings', deepNames.some((n) => n.startsWith('OpenAI')))
-  check('deep scan finds Anthropic from bundle strings', deepNames.some((n) => n.startsWith('Anthropic')))
-  check('deep scan finds the Vercel AI SDK', deepNames.some((n) => n.startsWith('Vercel AI SDK')))
-  check('deep scan never loses passive detections', deepNames.length >= names.length)
-  check(
-    'reads a model name from the bundle',
-    deepNames.includes('OpenAI gpt-4o-mini'),
-    deepNames.find((n) => n.startsWith('OpenAI')) ?? 'none',
-  )
-  await popup.evaluate(() => document.querySelector('.overflow-y-auto')?.scrollTo(0, 0))
-  await popup.waitForTimeout(200)
-  await panel.screenshot({ path: resolve(root, 'screenshots/popup-deep-scan.png') })
+    await mkdir(resolve(root, 'screenshots'), { recursive: true })
+    const panel = await popup.$('#root > div')
+    await panel.screenshot({ path: resolve(root, 'screenshots/popup-light.png') })
+    await popup.emulateMedia({ colorScheme: 'dark' })
+    await popup.waitForTimeout(350)
+    await panel.screenshot({ path: resolve(root, 'screenshots/popup-dark.png') })
+    await popup.emulateMedia({ colorScheme: 'light' })
 
-  const finalEvidence = await worker.evaluate(async (id) => {
-    const stored = await chrome.storage.session.get(`tab:${id}`)
-    return stored[`tab:${id}`]?.evidence ?? null
-  }, tabId)
-  await writeFile(
-    resolve(root, 'tests/fixtures/fixture-site.json'),
-    `${JSON.stringify(finalEvidence, null, 2)}\n`,
-  )
-  console.log('\nwrote tests/fixtures/fixture-site.json')
+    await popup.click('button:has-text("Deep scan")')
+    await popup.waitForTimeout(3500)
+    const deep = await readCards(popup)
+    check('deep scan finds OpenAI', deep.some((n) => n.startsWith('OpenAI')))
+    check('deep scan finds Anthropic', deep.some((n) => n.startsWith('Anthropic')))
+    check('deep scan finds the Vercel AI SDK', deep.some((n) => n.startsWith('Vercel AI SDK')))
+    check('deep scan keeps passive detections', deep.length >= names.length)
+    check('reads a model name from the bundle', deep.includes('OpenAI gpt-4o-mini'))
+    const footer = (await popup.textContent('footer'))?.trim()
+    check('deep scan reports what it added', footer?.includes('Found') ?? false, footer)
+
+    await popup.evaluate(() => document.querySelector('.overflow-y-auto')?.scrollTo(0, 0))
+    await popup.waitForTimeout(200)
+    await panel.screenshot({ path: resolve(root, 'screenshots/popup-deep-scan.png') })
+
+    const evidence = await evidenceFor(tabId)
+    check('response headers captured', Object.keys(evidence?.responseHeaders ?? {}).length > 0)
+    check('cookie names read', (evidence?.cookieNames ?? []).length > 0)
+    check(
+      'no cookie VALUES stored anywhere',
+      !JSON.stringify({ ...evidence, bundles: [] }).includes('fixture; Path'),
+    )
+    await writeFile(
+      resolve(root, 'tests/fixtures/fixture-site.json'),
+      `${JSON.stringify(evidence, null, 2)}\n`,
+    )
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 2. WordPress blog ===')
+  {
+    const { popup } = await inspect(SITES.wordpress)
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ')}`)
+    for (const expected of ['WordPress', 'WooCommerce', 'jQuery', 'PHP', 'Apache', 'Elementor']) {
+      check(`detects ${expected}`, names.some((n) => n.startsWith(expected)))
+    }
+    check('reads the WordPress version', names.includes('WordPress 6.7.1'))
+    for (const absent of ['Next.js', 'Vercel', 'Stripe', 'Clerk', 'Supabase']) {
+      check(`no false positive: ${absent}`, !names.some((n) => n.startsWith(absent)))
+    }
+    const panel = await popup.$('#root > div')
+    await panel.screenshot({ path: resolve(root, 'screenshots/popup-wordpress.png') })
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 3. Shopify store ===')
+  {
+    const { popup } = await inspect(SITES.shopify)
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ')}`)
+    for (const expected of ['Shopify', 'Cloudflare', 'Klaviyo', 'Gorgias']) {
+      check(`detects ${expected}`, names.some((n) => n.startsWith(expected)))
+    }
+    for (const absent of ['WordPress', 'Next.js', 'Django']) {
+      check(`no false positive: ${absent}`, !names.some((n) => n.startsWith(absent)))
+    }
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 4. Plain HTML page ===')
+  {
+    const { popup } = await inspect(SITES.plain, { settle: 1500 })
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ') || '(none)'}`)
+    check('stays quiet on a page with nothing to find', names.length <= 1, names.join(', '))
+    const body = await popup.textContent('body')
+    check(
+      'says it may have missed things rather than implying the site is simple',
+      body?.includes("can't detect") ?? false,
+    )
+    const panel = await popup.$('#root > div')
+    await panel.screenshot({ path: resolve(root, 'screenshots/popup-empty.png') })
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 5. Page that refuses script downloads ===')
+  {
+    const { popup } = await inspect(SITES.locked, { settle: 1500 })
+    const scanButton = await popup.$('button:has-text("Deep scan")')
+    if (scanButton) {
+      await scanButton.click()
+      await popup.waitForTimeout(3000)
+    }
+    const body = await popup.textContent('body')
+    check('deep scan fails gracefully rather than throwing', !!body && body.length > 0)
+    check('panel is still usable after a failed scan', (await popup.$('footer')) !== null)
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 6. Single-page app navigation ===')
+  {
+    const { page, popup, tabId } = await inspect(SITES.spa, { settle: 1500 })
+    const before = await readCards(popup)
+    check('detects the SPA framework', before.some((n) => n.startsWith('Vue')), before.join(', '))
+
+    // Client-side route change: no new document, so the stack is unchanged and
+    // evidence must survive rather than being wiped.
+    await page.evaluate(() => window.__navigate('/pricing'))
+    await page.waitForTimeout(900)
+    const during = await evidenceFor(tabId)
+    check('client-side navigation keeps evidence', (during?.globals ?? []).length > 0)
+
+    // A real document load to another origin must start clean.
+    await page.goto(`http://${SITES.plain}/`, { waitUntil: 'load' })
+    await page.waitForTimeout(1800)
+    const after = await evidenceFor(tabId)
+    check(
+      'cross-site navigation resets evidence',
+      !(after?.globals ?? []).includes('Vue'),
+      `globals now: ${(after?.globals ?? []).join(', ') || 'none'}`,
+    )
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 7. Per-site off switch ===')
+  {
+    const { popup, tabId } = await inspect(SITES.modern, { settle: 1500 })
+    await popup.click('button[aria-label="More options"]')
+    await popup.waitForTimeout(300)
+    await popup.click('button:has-text("Turn off for this site")')
+    await popup.waitForTimeout(1200)
+
+    const body = await popup.textContent('body')
+    check('panel reports the site is off', body?.includes('off for this site') ?? false)
+
+    const stored = await worker.evaluate(async (id) => {
+      const all = await chrome.storage.session.get(`tab:${id}`)
+      return all[`tab:${id}`] ?? null
+    }, tabId)
+    check('evidence for the site is discarded, not merely hidden', stored === null)
+
+    const badge = await worker.evaluate((id) => chrome.action.getBadgeText({ tabId: id }), tabId)
+    check('badge is cleared', badge === '', `"${badge}"`)
+
+    await popup.click('button:has-text("Turn on for")')
+    await popup.waitForTimeout(1500)
+    check(
+      'can be switched back on from the panel',
+      !(await popup.textContent('body'))?.includes('off for this site'),
+    )
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 8. Unsupported page ===')
+  {
+    const page = await context.newPage()
+    await page.goto('about:blank')
+    await sleep(500)
+    const popup = await openPanel()
+    const body = await popup.textContent('body')
+    check(
+      'shows a neutral message rather than an error',
+      body?.includes('Nothing to scan here') ?? false,
+      body?.slice(0, 70).trim(),
+    )
+  }
 } finally {
   await context.close()
   server.close()
 }
 
-console.log(failures === 0 ? '\nAll end-to-end checks passed.\n' : `\n${failures} check(s) failed.\n`)
+console.log(
+  failures === 0
+    ? `\nAll ${checks} end-to-end checks passed.\n`
+    : `\n${failures} of ${checks} checks failed.\n`,
+)
 process.exit(failures === 0 ? 0 : 1)

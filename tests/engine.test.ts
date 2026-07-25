@@ -101,8 +101,16 @@ describe('matchSignal', () => {
     expect(matchSignal({ type: 'global', path: 'Clerk', weight: 0.95 }, ev)).toBe(false)
   })
 
+  it('matches any one of several tags sharing a name', () => {
+    // WordPress sites routinely emit a generator tag per plugin.
+    const many = evidence({ metas: { generator: ['WordPress 6.7.1', 'WooCommerce 9.4.2'] } })
+    expect(matchSignal({ type: 'meta', name: 'generator', pattern: /WooCommerce/, weight: 0.9 }, many)).toBe(true)
+    expect(matchSignal({ type: 'meta', name: 'generator', pattern: /WordPress/, weight: 0.9 }, many)).toBe(true)
+    expect(matchSignal({ type: 'meta', name: 'generator', pattern: /Drupal/, weight: 0.9 }, many)).toBe(false)
+  })
+
   it('matches a meta tag', () => {
-    const ev = evidence({ metas: { generator: 'WordPress 6.4' } })
+    const ev = evidence({ metas: { generator: ['WordPress 6.4'] } })
     expect(matchSignal({ type: 'meta', name: 'generator', pattern: /WordPress/, weight: 0.9 }, ev)).toBe(true)
   })
 

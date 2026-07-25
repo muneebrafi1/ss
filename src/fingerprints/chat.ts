@@ -154,4 +154,52 @@ export const CHAT: Fingerprint[] = [
       { type: 'script', pattern: /canny\.io\/sdk\.js/, weight: 0.95 },
     ],
   },
+  {
+    id: 'tawkto',
+    name: 'Tawk.to',
+    category: 'chat',
+    description: 'Free live chat widget',
+    icon: 'tawkto',
+    website: 'https://tawk.to',
+    signals: [
+      { type: 'global', path: 'Tawk_API', weight: 0.95 },
+      { type: 'script', pattern: /embed\.tawk\.to/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'freshdesk',
+    name: 'Freshworks',
+    category: 'chat',
+    description: 'Support desk and messaging',
+    icon: 'freshworks',
+    website: 'https://freshworks.com',
+    signals: [
+      { type: 'global', path: 'fwSettings', weight: 0.9 },
+      { type: 'script', pattern: /widget\.freshworks\.com|wchat\.freshchat\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'gorgias',
+    name: 'Gorgias',
+    category: 'chat',
+    description: 'Support desk for ecommerce',
+    icon: 'gorgias',
+    website: 'https://gorgias.com',
+    signals: [
+      { type: 'global', path: 'GorgiasChat', weight: 0.95 },
+      { type: 'script', pattern: /config\.gorgias\.chat|assets\.gorgias\.chat/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'olark',
+    name: 'Olark',
+    category: 'chat',
+    description: 'Live chat',
+    icon: 'olark',
+    website: 'https://olark.com',
+    signals: [
+      { type: 'global', path: 'olark', weight: 0.95 },
+      { type: 'script', pattern: /static\.olark\.com/, weight: 0.95 },
+    ],
+  },
 ]

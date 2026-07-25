@@ -95,4 +95,41 @@ export const CONSENT: Fingerprint[] = [
       { type: 'script', pattern: /static\.axept\.io/, weight: 0.95 },
     ],
   },
+  {
+    id: 'iubenda',
+    name: 'Iubenda',
+    category: 'consent',
+    description: 'Privacy policies and consent',
+    icon: 'iubenda',
+    website: 'https://iubenda.com',
+    signals: [
+      { type: 'global', path: '_iub', weight: 0.95 },
+      { type: 'script', pattern: /cdn\.iubenda\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'didomi',
+    name: 'Didomi',
+    category: 'consent',
+    description: 'Consent management platform',
+    icon: 'didomi',
+    website: 'https://didomi.io',
+    signals: [
+      { type: 'global', path: 'Didomi', weight: 0.95 },
+      { type: 'script', pattern: /sdk\.privacy-center\.org|(^|\.)api\.privacy-center\.org/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'complianz',
+    name: 'Complianz',
+    category: 'consent',
+    description: 'WordPress consent plugin',
+    icon: 'wordpress',
+    website: 'https://complianz.io',
+    implies: ['wordpress'],
+    signals: [
+      { type: 'html', pattern: /cmplz-|complianz/, weight: 0.85 },
+      { type: 'cookie', pattern: /^cmplz_/, weight: 0.9 },
+    ],
+  },
 ]

@@ -138,8 +138,15 @@ export interface Evidence {
   cookieNames: string[]
   /** `src` values of script tags. */
   scripts: string[]
-  /** Meta tag name/property to content. */
-  metas: Record<string, string>
+  /**
+   * Meta tag name/property to every content value seen under that name.
+   *
+   * A list rather than a single value because pages routinely repeat a name —
+   * a WordPress site with WooCommerce and Elementor emits three separate
+   * `<meta name="generator">` tags, and keeping only the last one silently
+   * loses the version of everything but the last plugin to write one.
+   */
+  metas: Record<string, string[]>
   /** Dotted global paths that resolved to something defined. */
   globals: string[]
   /** Stringified primitive values for those paths, for version extraction. */

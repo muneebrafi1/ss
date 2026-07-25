@@ -3,7 +3,7 @@
 A Chrome extension that shows what any website is built with — AI tools, hosting,
 database, auth, payments, analytics and more — in one click.
 
-Detects **309 technologies across 26 categories**, covering both the modern
+Detects **383 technologies across 26 categories**, covering both the modern
 AI/SaaS stack and the mainstream web, so it produces a useful answer on an AI
 startup and on an ordinary business site alike.
 
@@ -35,7 +35,7 @@ deep scan (opt-in)   ─┘
 The **detection engine** (`src/engine/`) is pure functions with no `chrome.*`
 dependency: it takes an `Evidence` object and returns `Detection[]`. Everything
 browser-coupled lives on the other side of that boundary. That is what keeps a
-309-entry database maintainable and lets the entire matching layer be tested in
+383-entry database maintainable and lets the entire matching layer be tested in
 Node without a browser.
 
 ### Scoring
@@ -122,10 +122,17 @@ regexes, weight bounds, anchored cookie patterns, and that a bundled icon exists
 Signal types: `request`, `header`, `cookie`, `global`, `script`, `meta`, `dom`,
 `storage`, `html`, `bundle`. Only `bundle` requires a deep scan.
 
-Logos regenerate with `npm run icons:map` (runs automatically on build). Simple
-Icons has removed a number of major brands at their trademark holders' request,
-so about a third of entries fall back to a brand-coloured letter badge; colours
-for the well-known ones live in `scripts/make-icons-map.mjs`.
+Logos regenerate with `npm run icons:map` (runs automatically on build). They
+are resolved across four freely licensed sources — Simple Icons, Simple Icons
+v11 (which still carries brands since removed at their trademark holders'
+request, such as AWS, LinkedIn and OpenAI), the LobeHub AI set, and the Iconify
+logo sets — reaching real artwork for about three quarters of the database.
+Anything with no freely licensed mark anywhere renders as a tinted monogram in
+the brand's own colour.
+
+`npm run icons:gallery` renders every bundled icon to a single page and
+screenshots it in both themes. That sweep is what caught wordmark lockups being
+squashed into square tiles, and marks too dark to see against the dark card.
 
 ## Testing
 
@@ -135,9 +142,13 @@ captured from a live Chrome session is run back through `detect()`, so a
 careless pattern change makes a detection disappear in CI with no browser
 involved.
 
-`npm run test:e2e` loads the built extension into Chrome against a local fixture
-site, opens the real panel, clicks the real deep-scan button, and asserts both
-the detections and the privacy guarantee that no cookie value is ever stored.
+`npm run test:e2e` loads the built extension into Chrome and drives the real
+panel across six shapes of website — a modern AI SaaS, a WordPress blog with
+WooCommerce, a Shopify store, a single-page app, a bare HTML page, and a page
+that refuses script downloads — plus the per-site off switch and an unsupported
+page. 59 checks in all, including the privacy guarantee that no cookie value is
+ever stored.
+
 Chrome is launched with `--host-resolver-rules` mapping every hostname to the
 fixture server, so the page genuinely requests `api.openai.com` and the
 extension observes the real hostname — the request patterns are anchored to

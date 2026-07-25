@@ -1,10 +1,10 @@
 {
   "bundles": [
-    "\nwindow.__NEXT_DATA__ = { props: {}, page: \"/\", buildId: \"fixture\" };\nwindow.Stripe = function Stripe(){};\nwindow.Clerk = { loaded: true };\nwindow.posthog = { capture: function(){} };\nwindow.Sentry = { captureException: function(){} };\nwindow.__SENTRY__ = {};\nwindow.Intercom = function(){};\nwindow.hj = function(){};\nwindow.React = { version: \"18.3.1\" };\ntry {\n  localStorage.setItem(\"sb-abcdefgh-auth-token\", \"redacted\");\n  localStorage.setItem(\"ph_phc_demo_posthog\", \"redacted\");\n} catch (e) {}\n\n/* Strings a deep scan is meant to find. */\nvar MODEL = \"gpt-4o-mini\";\nvar CLAUDE = \"claude-sonnet-4-5-20250929\";\nvar PKGS = [\"@clerk/nextjs\", \"@supabase/supabase-js\", \"@sentry/nextjs\",\n            \"@pinecone-database/pinecone\", \"@ai-sdk/react\", \"@elevenlabs/react\"];\n\nfetch(\"http://api.openai.com/v1/chat/completions\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://app.posthog.com/e/?ip=1\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://clerk.app.fixture.test.accounts.dev/v1/client\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://abcdefgh.supabase.co/rest/v1/posts?select=*\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://o12345.ingest.sentry.io/api/1/envelope/?sentry_key=abc\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://widget.intercom.io/widget/abc123\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://api.resend.com/emails\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://gs1.svc.us-east-1.pinecone.io/query\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://api.elevenlabs.io/v1/text-to-speech/voice\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://res.cloudinary.com/demo/image/upload/sample.jpg\", {mode:\"no-cors\"}).catch(function(){});\n",
+    "\nwindow.__NEXT_DATA__ = { props: {}, page: \"/\", buildId: \"fixture\" };\nwindow.Stripe = function Stripe(){};\nwindow.Clerk = { loaded: true };\nwindow.posthog = { capture: function(){} };\nwindow.Sentry = { captureException: function(){} };\nwindow.__SENTRY__ = {};\nwindow.Intercom = function(){};\nwindow.hj = function(){};\nwindow.React = { version: \"18.3.1\" };\ntry {\n  localStorage.setItem(\"sb-abcdefgh-auth-token\", \"redacted\");\n  localStorage.setItem(\"ph_phc_demo_posthog\", \"redacted\");\n} catch (e) {}\nvar MODEL = \"gpt-4o-mini\";\nvar CLAUDE = \"claude-sonnet-4-5-20250929\";\nvar PKGS = [\"@clerk/nextjs\", \"@supabase/supabase-js\", \"@sentry/nextjs\",\n            \"@pinecone-database/pinecone\", \"@ai-sdk/react\", \"@elevenlabs/react\"];\nfetch(\"http://api.openai.com/v1/chat/completions\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://app.posthog.com/e/?ip=1\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://clerk.app.fixture.test.accounts.dev/v1/client\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://abcdefgh.supabase.co/rest/v1/posts?select=*\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://o12345.ingest.sentry.io/api/1/envelope/?sentry_key=abc\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://widget.intercom.io/widget/abc123\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://api.resend.com/emails\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://gs1.svc.us-east-1.pinecone.io/query\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://api.elevenlabs.io/v1/text-to-speech/voice\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://res.cloudinary.com/demo/image/upload/sample.jpg\", {mode:\"no-cors\"}).catch(function(){});\n",
     "{}",
-    "\nwindow.__NEXT_DATA__ = { props: {}, page: \"/\", buildId: \"fixture\" };\nwindow.Stripe = function Stripe(){};\nwindow.Clerk = { loaded: true };\nwindow.posthog = { capture: function(){} };\nwindow.Sentry = { captureException: function(){} };\nwindow.__SENTRY__ = {};\nwindow.Intercom = function(){};\nwindow.hj = function(){};\nwindow.React = { version: \"18.3.1\" };\ntry {\n  localStorage.setItem(\"sb-abcdefgh-auth-token\", \"redacted\");\n  localStorage.setItem(\"ph_phc_demo_posthog\", \"redacted\");\n} catch (e) {}\n\n/* Strings a deep scan is meant to find. */\nvar MODEL = \"gpt-4o-mini\";\nvar CLAUDE = \"claude-sonnet-4-5-20250929\";\nvar PKGS = [\"@clerk/nextjs\", \"@supabase/supabase-js\", \"@sentry/nextjs\",\n            \"@pinecone-database/pinecone\", \"@ai-sdk/react\", \"@elevenlabs/react\"];\n\nfetch(\"http://api.openai.com/v1/chat/completions\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://app.posthog.com/e/?ip=1\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://clerk.app.fixture.test.accounts.dev/v1/client\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://abcdefgh.supabase.co/rest/v1/posts?select=*\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://o12345.ingest.sentry.io/api/1/envelope/?sentry_key=abc\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://widget.intercom.io/widget/abc123\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://api.resend.com/emails\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://gs1.svc.us-east-1.pinecone.io/query\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://api.elevenlabs.io/v1/text-to-speech/voice\", {mode:\"no-cors\"}).catch(function(){});\nfetch(\"http://res.cloudinary.com/demo/image/upload/sample.jpg\", {mode:\"no-cors\"}).catch(function(){});\n"
+    "{}"
   ],
-  "collectedAt": 1784999594207,
+  "collectedAt": 1785001453353,
   "cookieNames": [
     "__stripe_mid",
     "__clerk_db_jwt",
@@ -29,18 +29,21 @@
     "Intercom"
   ],
   "hostname": "app.fixture.test",
-  "html": "<html lang=\"en\"><head>\n  <meta charset=\"utf-8\">\n  <title>Fixture app</title>\n  <script src=\"/_next/static/chunks/main-app.js\"></script>\n  <script src=\"http://js.stripe.com/v3\"></script>\n  <script src=\"http://static.hotjar.com/c/hotjar-123.js\"></script>\n</head>\n<body>\n  <div id=\"__next\">\n    <h1>Fixture</h1>\n    <iframe name=\"__privateStripeFrame1234\" src=\"about:blank\" title=\"stripe\"></iframe>\n    <div class=\"intercom-lightweight-app\"></div>\n  </div>\n\n</body></html>",
+  "html": "<html lang=\"en\"><head><meta charset=\"utf-8\">\n<title>Fixture app</title>\n<script src=\"/_next/static/chunks/main-app.js\"></script>\n<script src=\"http://js.stripe.com/v3\"></script>\n<script src=\"http://static.hotjar.com/c/hotjar-123.js\"></script>\n</head><body><div id=\"__next\"><h1>Fixture</h1>\n<iframe name=\"__privateStripeFrame1234\" src=\"about:blank\" title=\"stripe\"></iframe>\n<div class=\"intercom-lightweight-app\"></div>\n</div></body></html>",
   "metas": {},
   "requests": [
+    "app.fixture.test/_next/static/chunks/main-app.js",
+    "js.stripe.com/v3",
+    "static.hotjar.com/c/hotjar-123.js",
     "api.openai.com/v1/chat/completions",
     "app.posthog.com/e/?ip=1",
     "clerk.app.fixture.test.accounts.dev/v1/client",
     "abcdefgh.supabase.co/rest/v1/posts?select=*",
-    "api.elevenlabs.io/v1/text-to-speech/voice",
     "o12345.ingest.sentry.io/api/1/envelope/?sentry_key=abc",
     "widget.intercom.io/widget/abc123",
     "api.resend.com/emails",
     "gs1.svc.us-east-1.pinecone.io/query",
+    "api.elevenlabs.io/v1/text-to-speech/voice",
     "res.cloudinary.com/demo/image/upload/sample.jpg",
     "app.fixture.test/favicon.ico"
   ],
@@ -48,7 +51,7 @@
     "access-control-allow-origin": "*",
     "connection": "keep-alive",
     "content-type": "text/html; charset=utf-8",
-    "date": "Sat, 25 Jul 2026 17:13:08 GMT",
+    "date": "Sat, 25 Jul 2026 17:44:09 GMT",
     "keep-alive": "timeout=5",
     "server": "Vercel",
     "transfer-encoding": "chunked",

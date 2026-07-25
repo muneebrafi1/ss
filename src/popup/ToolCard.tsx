@@ -20,11 +20,7 @@ export function ToolCard({
 }) {
   // Edge columns anchor their tooltip inward so it cannot overflow the popup.
   const tooltipPosition =
-    column === 0
-      ? 'left-0'
-      : column === 2
-        ? 'right-0'
-        : 'left-1/2 -translate-x-1/2'
+    column === 0 ? 'left-0' : column === 2 ? 'right-0' : 'left-1/2 -translate-x-1/2'
 
   function open() {
     void chrome.tabs.create({ url: detection.url })
@@ -35,11 +31,12 @@ export function ToolCard({
       <button
         type="button"
         onClick={open}
+        title=""
         style={{ '--i': index } as React.CSSProperties}
-        className="sl-rise flex h-[88px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-card border border-line bg-card px-1.5 transition-colors duration-150 hover:bg-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 dark:border-line-dark dark:bg-card-dark dark:hover:bg-card-hover-dark dark:focus-visible:ring-ink-dark/40"
+        className="sl-rise sl-card flex h-[88px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-card border border-line bg-card px-1.5 hover:border-line hover:bg-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 dark:border-line-dark dark:bg-card-dark dark:hover:bg-card-hover-dark dark:focus-visible:ring-accent-dark/40"
       >
         <ToolLogo icon={detection.icon} name={detection.name} />
-        <span className="line-clamp-2 text-center text-[13px] font-medium leading-tight text-ink dark:text-ink-dark">
+        <span className="line-clamp-2 px-0.5 text-center text-[12.5px] font-medium leading-tight text-ink dark:text-ink-dark">
           {detection.name}
           {detection.version && (
             <span className="font-normal text-muted dark:text-muted-dark"> {detection.version}</span>
@@ -49,7 +46,7 @@ export function ToolCard({
 
       <span
         role="tooltip"
-        className={`pointer-events-none absolute bottom-full z-10 mb-1.5 w-max max-w-[190px] rounded-btn bg-ink px-2 py-1.5 text-[11px] leading-snug text-bg opacity-0 transition-opacity duration-150 group-hover:opacity-100 dark:bg-ink-dark dark:text-bg-dark ${tooltipPosition}`}
+        className={`sl-tip pointer-events-none absolute bottom-full z-10 mb-1.5 w-max max-w-[190px] rounded-btn bg-ink px-2 py-1.5 text-[11px] leading-snug text-bg opacity-0 group-hover:opacity-100 dark:bg-ink-dark dark:text-bg-dark ${tooltipPosition}`}
       >
         {detection.description}
       </span>

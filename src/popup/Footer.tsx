@@ -9,16 +9,17 @@ import {
 import { copyShareCard, downloadShareCard } from '@/lib/share-image'
 import type { Detection } from '@/types'
 
-/** Icon buttons keep the footer to one row; labels live in the menus. */
 function FooterButton({
   onClick,
   disabled,
   title,
+  active,
   children,
 }: {
   onClick: () => void
   disabled?: boolean
   title: string
+  active?: boolean
   children: React.ReactNode
 }) {
   return (
@@ -27,7 +28,11 @@ function FooterButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="flex items-center gap-1.5 rounded-btn px-2 py-1.5 text-[12px] font-medium text-muted transition-colors hover:bg-card hover:text-ink disabled:opacity-40 disabled:hover:bg-transparent dark:text-muted-dark dark:hover:bg-card-dark dark:hover:text-ink-dark"
+      className={`flex items-center gap-1.5 rounded-btn px-2 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-40 disabled:hover:bg-transparent ${
+        active
+          ? 'text-accent dark:text-accent-dark'
+          : 'text-muted hover:bg-card hover:text-ink dark:text-muted-dark dark:hover:bg-card-dark dark:hover:text-ink-dark'
+      }`}
     >
       {children}
     </button>
@@ -47,18 +52,23 @@ function Menu({
     function onDocumentClick(event: MouseEvent) {
       if (!ref.current?.contains(event.target as Node)) onClose()
     }
+    function onEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose()
+    }
     // Deferred so the click that opened the menu does not immediately close it.
     const timer = setTimeout(() => document.addEventListener('click', onDocumentClick))
+    document.addEventListener('keydown', onEscape)
     return () => {
       clearTimeout(timer)
       document.removeEventListener('click', onDocumentClick)
+      document.removeEventListener('keydown', onEscape)
     }
   }, [onClose])
 
   return (
     <div
       ref={ref}
-      className="absolute bottom-full right-0 mb-1.5 min-w-[150px] overflow-hidden rounded-btn border border-line bg-bg py-1 dark:border-line-dark dark:bg-card-dark"
+      className="absolute bottom-full left-0 z-20 mb-1.5 min-w-[160px] overflow-hidden rounded-btn border border-line bg-bg py-1 dark:border-line-dark dark:bg-card-dark"
     >
       {items.map((item) => (
         <button
@@ -78,22 +88,26 @@ function Menu({
 }
 
 /**
- * Footer bar: deep scan, export, share, and settings.
+ * Footer bar: deep scan, export, and share.
  *
  * Deep scan is a button rather than automatic behaviour because it is the only
- * thing StackLens does that reaches out to the network at all.
+ * thing StackLens does that reaches out to the network at all. When it finishes
+ * it reports what it added, so pressing it never looks like it did nothing.
  */
 export function Footer({
   hostname,
   detections,
   deepScanned,
   scanning,
+  scanGain,
   onDeepScan,
 }: {
   hostname: string
   detections: Detection[]
   deepScanned: boolean
   scanning: boolean
+  /** How many technologies the last deep scan added, or null if it has not run. */
+  scanGain: number | null
   onDeepScan: () => void
 }) {
   const [menu, setMenu] = useState<'export' | 'share' | null>(null)
@@ -101,7 +115,7 @@ export function Footer({
 
   function flash(message: string) {
     setToast(message)
-    setTimeout(() => setToast(null), 1600)
+    setTimeout(() => setToast(null), 1700)
   }
 
   function exportAs(format: ExportFormat) {
@@ -110,6 +124,15 @@ export function Footer({
   }
 
   const hasResults = detections.length > 0
+  const scanLabel = scanning
+    ? 'Scanning…'
+    : deepScanned
+      ? scanGain === null
+        ? 'Scanned'
+        : scanGain > 0
+          ? `Found ${scanGain} more`
+          : 'Nothing more'
+      : 'Deep scan'
 
   return (
     <footer className="relative flex items-center gap-0.5 border-t border-line px-2 py-1.5 dark:border-line-dark">
@@ -122,17 +145,28 @@ export function Footer({
       <FooterButton
         onClick={onDeepScan}
         disabled={scanning || deepScanned}
+        active={scanning || (deepScanned && (scanGain ?? 0) > 0)}
         title={
           deepScanned
             ? 'Deep scan already run for this page'
             : "Download and search this site's JavaScript for more tools"
         }
       >
-        <svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+        <svg
+          viewBox="0 0 14 14"
+          width="13"
+          height="13"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          className={scanning ? 'animate-spin' : undefined}
+        >
           <circle cx="6.2" cy="6.2" r="4.2" />
           <path d="M9.4 9.4L12 12" />
         </svg>
-        {scanning ? 'Scanning…' : deepScanned ? 'Scanned' : 'Deep scan'}
+        {scanLabel}
       </FooterButton>
 
       <div className="relative">
@@ -150,7 +184,13 @@ export function Footer({
           <Menu
             onClose={() => setMenu(null)}
             items={[
-              { label: 'Copy as Markdown', run: () => void copyToClipboard(formatExport('markdown', hostname, detections)).then(() => flash('Copied')) },
+              {
+                label: 'Copy as Markdown',
+                run: () =>
+                  void copyToClipboard(formatExport('markdown', hostname, detections)).then((ok) =>
+                    flash(ok ? 'Copied' : 'Copy failed'),
+                  ),
+              },
               { label: 'Download Markdown', run: () => exportAs('markdown') },
               { label: 'Download JSON', run: () => exportAs('json') },
               { label: 'Download CSV', run: () => exportAs('csv') },
@@ -175,21 +215,18 @@ export function Footer({
           <Menu
             onClose={() => setMenu(null)}
             items={[
-              { label: 'Copy image', run: () => void copyShareCard(hostname, detections).then((ok) => flash(ok ? 'Image copied' : 'Copy failed')) },
+              {
+                label: 'Copy image',
+                run: () =>
+                  void copyShareCard(hostname, detections).then((ok) =>
+                    flash(ok ? 'Image copied' : 'Copy failed'),
+                  ),
+              },
               { label: 'Download image', run: () => void downloadShareCard(hostname, detections) },
             ]}
           />
         )}
       </div>
-
-      <div className="flex-1" />
-
-      <FooterButton onClick={() => void chrome.runtime.openOptionsPage()} title="Settings">
-        <svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4">
-          <circle cx="7" cy="7" r="2.1" />
-          <path d="M7 1.4v1.4M7 11.2v1.4M1.4 7h1.4M11.2 7h1.4M3 3l1 1M10 10l1 1M11 3l-1 1M4 10l-1 1" strokeLinecap="round" />
-        </svg>
-      </FooterButton>
     </footer>
   )
 }

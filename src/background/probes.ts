@@ -14,7 +14,7 @@
 
 export interface DomProbeResult {
   scripts: string[]
-  metas: Record<string, string>
+  metas: Record<string, string[]>
   domMatches: string[]
   storageKeys: string[]
   html: string
@@ -37,14 +37,19 @@ export function domProbe(selectors: string[]): DomProbeResult {
     if (src) scripts.push(src)
   }
 
-  const metas: Record<string, string> = {}
+  const metas: Record<string, string[]> = {}
   const metaNodes = document.querySelectorAll('meta[name], meta[property]')
   for (let i = 0; i < metaNodes.length; i++) {
     const node = metaNodes[i]
     if (!node) continue
     const name = node.getAttribute('name') ?? node.getAttribute('property')
     const content = node.getAttribute('content')
-    if (name && content) metas[name.toLowerCase()] = content
+    if (!name || !content) continue
+    const key = name.toLowerCase()
+    // Every value is kept: a name can legitimately repeat.
+    const existing = metas[key]
+    if (existing) existing.push(content)
+    else metas[key] = [content]
   }
 
   const domMatches: string[] = []

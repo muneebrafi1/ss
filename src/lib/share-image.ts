@@ -42,45 +42,75 @@ function roundedRect(
   ctx.closePath()
 }
 
-function drawLogo(
+function luminanceOf(hex: string): number {
+  const value = hex.replace('#', '')
+  return (
+    (parseInt(value.slice(0, 2), 16) * 299 +
+      parseInt(value.slice(2, 4), 16) * 587 +
+      parseInt(value.slice(4, 6), 16) * 114) /
+    1000
+  )
+}
+
+/**
+ * Rasterizes a bundled logo.
+ *
+ * Icons now come from several sources and can be multi-path, full-colour
+ * artwork on their own viewBox, so `Path2D` is no longer sufficient. Wrapping
+ * the stored markup in an SVG data URL lets the browser draw it exactly as the
+ * panel does, and keeps this renderer honest about what the user just saw.
+ */
+function logoImage(detection: Detection): Promise<HTMLImageElement | null> {
+  const entry = ICONS[detection.icon]
+  if (!entry?.body) return Promise.resolve(null)
+
+  // Monochrome marks that would vanish against the dark card are lifted to the
+  // text colour; brand artwork keeps its own colours.
+  const fill = entry.mono
+    ? luminanceOf(entry.hex) < 60
+      ? '#F2F2F5'
+      : entry.hex
+    : undefined
+
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${entry.vb ?? '0 0 24 24'}" ` +
+    `width="${LOGO_SIZE}" height="${LOGO_SIZE}"${fill ? ` fill="${fill}"` : ''}>` +
+    `${entry.body}</svg>`
+
+  return new Promise((resolve) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => resolve(null)
+    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+  })
+}
+
+function drawMonogram(
   ctx: CanvasRenderingContext2D,
   detection: Detection,
   x: number,
   y: number,
 ): void {
-  const entry = ICONS[detection.icon]
-
-  if (entry?.path) {
-    ctx.save()
-    ctx.translate(x, y)
-    ctx.scale(LOGO_SIZE / 24, LOGO_SIZE / 24)
-    ctx.fillStyle = entry.hex
-    // Dark marks vanish against the dark card, so lift them to the text colour.
-    const value = entry.hex.replace('#', '')
-    const luminance =
-      (parseInt(value.slice(0, 2), 16) * 299 +
-        parseInt(value.slice(2, 4), 16) * 587 +
-        parseInt(value.slice(4, 6), 16) * 114) /
-      1000
-    if (luminance < 60) ctx.fillStyle = '#F2F2F5'
-    ctx.fill(new Path2D(entry.path))
-    ctx.restore()
-    return
-  }
-
+  const hex = ICONS[detection.icon]?.hex ?? '#6B6B76'
   ctx.save()
-  ctx.fillStyle = entry?.hex ?? '#6B6B76'
+  // Mirrors the panel's tinted treatment rather than a solid block.
+  ctx.globalAlpha = 0.26
+  ctx.fillStyle = hex
   roundedRect(ctx, x, y, LOGO_SIZE, LOGO_SIZE, 16)
   ctx.fill()
-  ctx.fillStyle = '#FFFFFF'
-  ctx.font = `600 ${Math.round(LOGO_SIZE * 0.36)}px ui-sans-serif, system-ui, sans-serif`
+  ctx.globalAlpha = 1
+  ctx.fillStyle = luminanceOf(hex) < 70 ? '#B9B9C4' : hex
+  ctx.font = `600 ${Math.round(LOGO_SIZE * 0.42)}px ui-sans-serif, system-ui, sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(initials(detection.name), x + LOGO_SIZE / 2, y + LOGO_SIZE / 2 + 1)
   ctx.restore()
 }
 
-export function renderShareCard(hostname: string, detections: Detection[]): HTMLCanvasElement {
+export async function renderShareCard(
+  hostname: string,
+  detections: Detection[],
+): Promise<HTMLCanvasElement> {
   const canvas = document.createElement('canvas')
   canvas.width = WIDTH
   canvas.height = HEIGHT
@@ -106,10 +136,15 @@ export function renderShareCard(hostname: string, detections: Detection[]): HTML
 
   const shown = detections.slice(0, MAX_LOGOS)
   const startY = 230
+  // Decoded in parallel so one slow logo does not serialize the whole card.
+  const images = await Promise.all(shown.map((detection) => logoImage(detection)))
+
   shown.forEach((detection, i) => {
-    const column = i % COLUMNS
-    const row = Math.floor(i / COLUMNS)
-    drawLogo(ctx, detection, 72 + column * (LOGO_SIZE + GAP), startY + row * (LOGO_SIZE + GAP))
+    const x = 72 + (i % COLUMNS) * (LOGO_SIZE + GAP)
+    const y = startY + Math.floor(i / COLUMNS) * (LOGO_SIZE + GAP)
+    const image = images[i]
+    if (image) ctx.drawImage(image, x, y, LOGO_SIZE, LOGO_SIZE)
+    else drawMonogram(ctx, detection, x, y)
   })
 
   if (detections.length > MAX_LOGOS) {
@@ -131,7 +166,7 @@ function toBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
 
 export async function copyShareCard(hostname: string, detections: Detection[]): Promise<boolean> {
   try {
-    const blob = await toBlob(renderShareCard(hostname, detections))
+    const blob = await toBlob(await renderShareCard(hostname, detections))
     if (!blob) return false
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
     return true
@@ -144,7 +179,7 @@ export async function downloadShareCard(
   hostname: string,
   detections: Detection[],
 ): Promise<void> {
-  const blob = await toBlob(renderShareCard(hostname, detections))
+  const blob = await toBlob(await renderShareCard(hostname, detections))
   if (!blob) return
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

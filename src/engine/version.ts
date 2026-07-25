@@ -54,9 +54,12 @@ export function extractOne(matcher: VersionMatcher, evidence: Evidence): string 
     }
 
     case 'meta': {
-      const value = evidence.metas[matcher.name.toLowerCase()]
-      if (value === undefined) return null
-      return matcher.pattern ? firstCapture([value], matcher.pattern) : sanitize(value)
+      const values = evidence.metas[matcher.name.toLowerCase()]
+      if (values === undefined || values.length === 0) return null
+      if (!matcher.pattern) return sanitize(values[0])
+      // Each tag is tried in turn, so WordPress still reports its own version
+      // on a page where WooCommerce also wrote a generator tag.
+      return firstCapture(values, matcher.pattern)
     }
 
     case 'header': {

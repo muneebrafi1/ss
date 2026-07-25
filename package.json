@@ -13,13 +13,17 @@
     "icons:map": "node scripts/make-icons-map.mjs",
     "test:e2e": "npm run build && node tests/e2e/run.mjs",
     "verify": "npm run test && npm run test:e2e",
-    "dev": "vite build --watch"
+    "dev": "vite build --watch",
+    "icons:gallery": "node scripts/icon-gallery.mjs && node tests/e2e/icons.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@iconify-json/logos": "^1.2.11",
+    "@iconify-json/selfhst": "^1.2.9",
+    "@lobehub/icons-static-svg": "^1.94.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/chrome": "^0.1.28",
     "@types/node": "^26.1.1",
@@ -29,6 +33,7 @@
     "playwright": "^1.62.0",
     "sharp": "^0.35.3",
     "simple-icons": "^16.27.0",
+    "simple-icons-v11": "npm:simple-icons@^11.15.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vite": "^8.1.5",

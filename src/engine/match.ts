@@ -28,9 +28,11 @@ export function matchSignal(signal: Signal, evidence: Evidence): boolean {
       return evidence.scripts.some((s) => signal.pattern.test(s))
 
     case 'meta': {
-      const value = evidence.metas[signal.name.toLowerCase()]
-      if (value === undefined) return false
-      return signal.pattern ? signal.pattern.test(value) : true
+      const values = evidence.metas[signal.name.toLowerCase()]
+      if (values === undefined || values.length === 0) return false
+      if (!signal.pattern) return true
+      const pattern = signal.pattern
+      return values.some((value) => pattern.test(value))
     }
 
     case 'dom':

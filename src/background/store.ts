@@ -110,7 +110,10 @@ function merge(base: Evidence, patch: Partial<Evidence>): Evidence {
     next.scripts = [...new Set([...base.scripts, ...patch.scripts])]
   }
   if (patch.metas) {
-    next.metas = { ...base.metas, ...patch.metas }
+    next.metas = { ...base.metas }
+    for (const [name, values] of Object.entries(patch.metas)) {
+      next.metas[name] = [...new Set([...(base.metas[name] ?? []), ...values])]
+    }
   }
   if (patch.globals) {
     next.globals = [...new Set([...base.globals, ...patch.globals])]

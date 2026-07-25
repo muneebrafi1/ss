@@ -204,4 +204,52 @@ export const PAYMENTS: Fingerprint[] = [
       { type: 'bundle', pattern: /@revenuecat\/purchases-js/, weight: 0.85 },
     ],
   },
+  {
+    id: 'paystack',
+    name: 'Paystack',
+    category: 'payments',
+    description: 'Payments for African businesses',
+    icon: 'paystack',
+    website: 'https://paystack.com',
+    signals: [
+      { type: 'global', path: 'PaystackPop', weight: 0.95 },
+      { type: 'script', pattern: /js\.paystack\.co/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'flutterwave',
+    name: 'Flutterwave',
+    category: 'payments',
+    description: 'Payments across Africa',
+    icon: 'flutterwave',
+    website: 'https://flutterwave.com',
+    signals: [
+      { type: 'global', path: 'FlutterwaveCheckout', weight: 0.95 },
+      { type: 'script', pattern: /checkout\.flutterwave\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'mercadopago',
+    name: 'Mercado Pago',
+    category: 'payments',
+    description: 'Payments across Latin America',
+    icon: 'mercadopago',
+    website: 'https://mercadopago.com',
+    signals: [
+      { type: 'global', path: 'MercadoPago', weight: 0.95 },
+      { type: 'script', pattern: /sdk\.mercadopago\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'shopify-payments',
+    name: 'Shop Pay',
+    category: 'payments',
+    description: "Shopify's accelerated checkout",
+    icon: 'shopify',
+    website: 'https://shop.app',
+    implies: ['shopify'],
+    signals: [
+      { type: 'request', pattern: /portal\.shop\.app|pay\.shopify\.com/, weight: 0.95 },
+    ],
+  },
 ]
