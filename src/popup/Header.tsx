@@ -18,6 +18,24 @@ function faviconUrl(pageUrl: string): string {
   return url.toString()
 }
 
+const PAGES = [
+  { file: 'report.html', label: 'Full report' },
+  { file: 'history.html', label: 'History' },
+  { file: 'technologies.html', label: 'All technologies' },
+] as const
+
+function MenuItem({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="block w-full px-3 py-1.5 text-left text-[12px] text-ink transition-colors hover:bg-card dark:text-ink-dark dark:hover:bg-card-hover-dark"
+    >
+      {children}
+    </button>
+  )
+}
+
 function GlobeFallback() {
   return (
     <span className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[4px] bg-card text-muted dark:bg-card-dark dark:text-muted-dark">
@@ -103,29 +121,44 @@ export function Header({
         </button>
 
         {menuOpen && (
-          <div className="absolute right-0 top-full z-20 mt-1.5 min-w-[190px] overflow-hidden rounded-btn border border-line bg-bg py-1 dark:border-line-dark dark:bg-card-dark">
+          <div className="absolute right-0 top-full z-20 mt-1.5 min-w-[200px] overflow-hidden rounded-btn border border-line bg-bg py-1 dark:border-line-dark dark:bg-card-dark">
+            {/*
+              The full-page views live behind this menu. The panel answers "what
+              is this site" at a glance; reading, searching and comparing belong
+              on a page with room for them.
+            */}
+            {PAGES.map((page) => (
+              <MenuItem
+                key={page.file}
+                onClick={() => {
+                  void chrome.tabs.create({ url: chrome.runtime.getURL(page.file) })
+                  setMenuOpen(false)
+                }}
+              >
+                {page.label}
+              </MenuItem>
+            ))}
+
+            <div className="my-1 border-t border-line dark:border-line-dark" />
+
             {onDisableSite && hostname && (
-              <button
-                type="button"
+              <MenuItem
                 onClick={() => {
                   onDisableSite()
                   setMenuOpen(false)
                 }}
-                className="block w-full px-3 py-1.5 text-left text-[12px] text-ink transition-colors hover:bg-card dark:text-ink-dark dark:hover:bg-card-hover-dark"
               >
                 Turn off for this site
-              </button>
+              </MenuItem>
             )}
-            <button
-              type="button"
+            <MenuItem
               onClick={() => {
                 void chrome.runtime.openOptionsPage()
                 setMenuOpen(false)
               }}
-              className="block w-full px-3 py-1.5 text-left text-[12px] text-ink transition-colors hover:bg-card dark:text-ink-dark dark:hover:bg-card-hover-dark"
             >
               Settings
-            </button>
+            </MenuItem>
           </div>
         )}
       </div>

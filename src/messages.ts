@@ -1,5 +1,6 @@
 import type { Detection } from '@/types'
 import type { Settings } from '@/background/settings'
+import type { HistoryEntry } from '@/background/history'
 
 /**
  * Message contract between the panel, the options page, and the service worker.
@@ -19,6 +20,8 @@ export type ScanStatus =
 
 export interface PanelState {
   status: ScanStatus
+  /** Tab this state describes, so the panel can watch it for late evidence. */
+  tabId: number | null
   /** Hostname of the current tab, shown in the header. */
   hostname: string
   url: string
@@ -30,15 +33,25 @@ export interface PanelState {
 }
 
 export type Request =
-  | { type: 'GET_PANEL_STATE' }
+  /**
+   * `refresh: true` reads and re-detects without re-running the in-page probes.
+   * The full form writes evidence, so using it for the panel's live refresh
+   * would retrigger the storage listener that asked for it and spin forever.
+   */
+  | { type: 'GET_PANEL_STATE'; refresh?: boolean }
   | { type: 'RUN_DEEP_SCAN' }
   | { type: 'SET_HOST_ENABLED'; hostname: string; enabled: boolean }
   | { type: 'SET_ENABLED'; enabled: boolean }
+  | { type: 'SET_HISTORY_ENABLED'; enabled: boolean }
   | { type: 'GET_SETTINGS' }
+  | { type: 'GET_HISTORY' }
+  | { type: 'CLEAR_HISTORY' }
+  | { type: 'FORGET_SITE'; hostname: string }
 
 export type Response =
   | { ok: true; state: PanelState }
   | { ok: true; settings: Settings }
+  | { ok: true; history: HistoryEntry[] }
   | { ok: false; error: string }
 
 export function sendMessage(request: Request): Promise<Response> {

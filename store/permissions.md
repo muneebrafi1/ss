@@ -54,9 +54,13 @@ fails if any cookie value appears in stored data.
 
 ## `storage`
 
-Stores the user's settings locally, and holds per-tab detection results in
-session storage so the panel can display them. Session storage is cleared when
-the browser closes. Nothing is synced or transmitted.
+Stores the user's settings locally, holds per-tab detection results in session
+storage so the panel can display them, and — when the user leaves scan history
+enabled — keeps a local list of which technologies each visited site uses.
+
+Session storage is cleared when the browser closes. History is on by default,
+switchable off, clearable in one click, and holds only domains and technology
+names, never paths or page content. Nothing is synced or transmitted.
 
 ## `tabs`
 
@@ -92,9 +96,11 @@ This feature is off by default and runs only when the user presses the button.
 - Authentication information: **not collected** (cookie names only, never values)
 - Personal communications: **not collected**
 - Location: **not collected**
-- Web history: **not collected** — detection results live only in session
-  storage for the tab they describe, are never transmitted, and are discarded
-  when the browser closes
+- Web history: **stored locally only, never transmitted.** With scan history
+  enabled the extension keeps, on the user's own device, one entry per visited
+  site holding its domain and the technology names detected. No paths, no page
+  content, no request logs. The user can disable the feature, clear the list, or
+  remove individual sites at any time, and disabling it erases what was stored
 - User activity: **not collected**
 - Website content: **not collected** — page content is read in memory to
   identify technologies and is never transmitted

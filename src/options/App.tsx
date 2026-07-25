@@ -1,13 +1,65 @@
 import { useEffect, useState } from 'react'
-import { sendMessage } from '@/messages'
 import type { Settings } from '@/background/settings'
+import { DATABASE_FINGERPRINTS, CATEGORIES } from '@/fingerprints'
+import { sendMessage } from '@/messages'
+import { Button, Page, Toast, useToast } from '@/ui/Page'
+
+function Row({
+  title,
+  body,
+  children,
+}: {
+  title: string
+  body: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex items-start justify-between gap-6 border-b border-line py-4 last:border-0 dark:border-line-dark">
+      <div className="min-w-0">
+        <p className="text-[14px] font-medium">{title}</p>
+        <p className="mt-0.5 text-[13px] leading-relaxed text-muted dark:text-muted-dark">{body}</p>
+      </div>
+      <div className="shrink-0 pt-0.5">{children}</div>
+    </div>
+  )
+}
+
+function Switch({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean
+  onChange: (value: boolean) => void
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative h-[22px] w-[38px] rounded-full transition-colors ${
+        checked ? 'bg-accent dark:bg-accent-dark' : 'bg-line dark:bg-line-dark'
+      }`}
+    >
+      <span
+        className={`absolute top-[3px] h-4 w-4 rounded-full bg-white transition-transform ${
+          checked ? 'translate-x-[19px]' : 'translate-x-[3px]'
+        }`}
+      />
+    </button>
+  )
+}
 
 export function OptionsApp() {
   const [settings, setSettings] = useState<Settings | null>(null)
+  const [toast, flash] = useToast()
 
   async function refresh() {
     const response = await sendMessage({ type: 'GET_SETTINGS' })
-    if ('settings' in response && response.ok) setSettings(response.settings)
+    if (response.ok && 'settings' in response) setSettings(response.settings)
   }
 
   useEffect(() => {
@@ -16,7 +68,15 @@ export function OptionsApp() {
 
   async function setEnabled(enabled: boolean) {
     const response = await sendMessage({ type: 'SET_ENABLED', enabled })
-    if ('settings' in response && response.ok) setSettings(response.settings)
+    if (response.ok && 'settings' in response) setSettings(response.settings)
+  }
+
+  async function setHistoryEnabled(enabled: boolean) {
+    const response = await sendMessage({ type: 'SET_HISTORY_ENABLED', enabled })
+    if (response.ok && 'settings' in response) {
+      setSettings(response.settings)
+      flash(enabled ? 'History on' : 'History off and cleared')
+    }
   }
 
   async function reenable(hostname: string) {
@@ -25,59 +85,68 @@ export function OptionsApp() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-xl bg-bg px-6 py-12 text-ink dark:bg-bg-dark dark:text-ink-dark">
-      <h1 className="text-xl font-semibold">StackLens settings</h1>
-
-      <section className="mt-8">
-        <label className="flex items-start gap-3">
-          <input
-            type="checkbox"
+    <Page
+      current="options"
+      title="Settings"
+      subtitle={`${DATABASE_FINGERPRINTS.length} technologies across ${CATEGORIES.length} categories`}
+    >
+      <section className="rounded-card border border-line px-4 dark:border-line-dark">
+        <Row
+          title="Scan sites automatically"
+          body="When off, StackLens collects nothing anywhere and the toolbar badge stays empty."
+        >
+          <Switch
             checked={settings?.enabled ?? true}
-            onChange={(event) => void setEnabled(event.target.checked)}
-            className="mt-0.5 h-4 w-4 accent-ink dark:accent-ink-dark"
+            onChange={(value) => void setEnabled(value)}
+            label="Scan sites automatically"
           />
-          <span>
-            <span className="block text-[14px] font-medium">Scan sites automatically</span>
-            <span className="mt-0.5 block text-[13px] leading-relaxed text-muted dark:text-muted-dark">
-              When off, StackLens collects nothing anywhere and the toolbar badge stays empty.
-            </span>
-          </span>
-        </label>
+        </Row>
+        <Row
+          title="Remember scanned sites"
+          body="Keeps a list of what each site was built with, on this device only. Turning it off clears everything already stored."
+        >
+          <Switch
+            checked={settings?.historyEnabled ?? true}
+            onChange={(value) => void setHistoryEnabled(value)}
+            label="Remember scanned sites"
+          />
+        </Row>
       </section>
 
-      <section className="mt-10">
-        <h2 className="text-[14px] font-medium">Sites turned off</h2>
+      <section className="mt-8">
+        <h2 className="mb-2 text-[14px] font-medium">Sites turned off</h2>
         {settings?.disabledHosts.length ? (
-          <ul className="mt-3 divide-y divide-line rounded-card border border-line dark:divide-line-dark dark:border-line-dark">
+          <ul className="divide-y divide-line rounded-card border border-line dark:divide-line-dark dark:border-line-dark">
             {settings.disabledHosts.map((hostname) => (
-              <li key={hostname} className="flex items-center justify-between px-3.5 py-2.5">
+              <li key={hostname} className="flex items-center justify-between px-4 py-2.5">
                 <span className="text-[13px]">{hostname}</span>
-                <button
-                  type="button"
-                  onClick={() => void reenable(hostname)}
-                  className="rounded-btn px-2 py-1 text-[12px] font-medium text-muted transition-colors hover:bg-card hover:text-ink dark:text-muted-dark dark:hover:bg-card-dark dark:hover:text-ink-dark"
-                >
-                  Turn back on
-                </button>
+                <Button onClick={() => void reenable(hostname)}>Turn back on</Button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-[13px] text-muted dark:text-muted-dark">
-            None. You can turn StackLens off for a site from the panel.
+          <p className="text-[13px] text-muted dark:text-muted-dark">
+            None. You can turn StackLens off for a site from the panel&apos;s menu.
           </p>
         )}
       </section>
 
-      <section className="mt-12 border-t border-line pt-6 text-[13px] leading-relaxed text-muted dark:border-line-dark dark:text-muted-dark">
-        <h2 className="text-[14px] font-medium text-ink dark:text-ink-dark">Your data</h2>
-        <p className="mt-2">
+      <section className="mt-10 border-t border-line pt-6 dark:border-line-dark">
+        <h2 className="text-[14px] font-medium">Your data</h2>
+        <p className="mt-2 text-[13px] leading-relaxed text-muted dark:text-muted-dark">
           Everything StackLens reads stays on this device. There is no account, no analytics, and
           no server — nothing about the sites you visit is ever transmitted anywhere. Detection
-          results are held only for the current browsing session and are discarded when you close
-          the browser.
+          results are held only for the current browsing session; scan history, when enabled, is
+          stored locally and can be cleared at any time from the History page.
+        </p>
+        <p className="mt-3 text-[13px] leading-relaxed text-muted dark:text-muted-dark">
+          Cookie and storage <strong className="font-medium text-ink dark:text-ink-dark">names</strong> are
+          read to identify services. Their{' '}
+          <strong className="font-medium text-ink dark:text-ink-dark">values are never read</strong>.
         </p>
       </section>
-    </main>
+
+      <Toast message={toast} />
+    </Page>
   )
 }

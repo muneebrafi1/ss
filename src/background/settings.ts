@@ -9,12 +9,19 @@ export interface Settings {
   disabledHosts: string[]
   /** Whether the first-run welcome page has been shown. */
   welcomeShown: boolean
+  /**
+   * Whether scans are remembered locally. On by default because the history
+   * page is one of the more useful things here, and off in one click because it
+   * is still a record of sites visited.
+   */
+  historyEnabled: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   enabled: true,
   disabledHosts: [],
   welcomeShown: false,
+  historyEnabled: true,
 }
 
 const KEY = 'settings'

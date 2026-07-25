@@ -40,6 +40,9 @@ export default defineConfig({
         popup: resolve(root, 'popup.html'),
         options: resolve(root, 'options.html'),
         welcome: resolve(root, 'welcome.html'),
+        report: resolve(root, 'report.html'),
+        history: resolve(root, 'history.html'),
+        technologies: resolve(root, 'technologies.html'),
         background: resolve(root, 'src/background/index.ts'),
       },
       output: {

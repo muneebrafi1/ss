@@ -66,8 +66,8 @@ export function App() {
   const [query, setQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    const response = await sendMessage({ type: 'GET_PANEL_STATE' })
+  const load = useCallback(async (refresh = false) => {
+    const response = await sendMessage({ type: 'GET_PANEL_STATE', refresh })
     if (response.ok && 'state' in response) setState(response.state)
     else if (!response.ok) setError(response.error)
   }, [])
@@ -75,6 +75,34 @@ export function App() {
   useEffect(() => {
     void load()
   }, [load])
+
+  /**
+   * Keeps the panel current as late evidence arrives.
+   *
+   * A page's background requests can still be in flight when the panel opens,
+   * and reading once meant a panel opened a second too early showed an
+   * incomplete stack with nothing to indicate it. Watching the tab's own record
+   * makes the panel fill in as the page settles instead.
+   */
+  const tabId = state?.tabId ?? null
+  useEffect(() => {
+    if (tabId === null) return
+    const key = `tab:${tabId}`
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    function onChanged(changes: Record<string, chrome.storage.StorageChange>, area: string) {
+      if (area !== 'session' || !(key in changes)) return
+      // Debounced: a busy page rewrites this record many times a second.
+      clearTimeout(timer)
+      timer = setTimeout(() => void load(true), 400)
+    }
+
+    chrome.storage.onChanged.addListener(onChanged)
+    return () => {
+      clearTimeout(timer)
+      chrome.storage.onChanged.removeListener(onChanged)
+    }
+  }, [tabId, load])
 
   async function runDeepScan() {
     if (!state) return

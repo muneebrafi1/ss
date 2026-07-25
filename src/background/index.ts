@@ -17,6 +17,7 @@ import {
   setHostEnabled,
   type Settings,
 } from './settings'
+import { clearHistory, getHistory, recordScan, removeFromHistory } from './history'
 import { clearEvidence, flushAndRead, recordEvidence } from './store'
 
 /**
@@ -40,6 +41,15 @@ import { clearEvidence, flushAndRead, recordEvidence } from './store'
 let settings: Settings = DEFAULT_SETTINGS
 const tabHosts = new Map<number, string>()
 
+/**
+ * The last ordinary web page the user was looking at.
+ *
+ * The full-page views run in their own tab, which makes them the active tab the
+ * moment they open — so "describe the current page" has to mean the page the
+ * user came from, not the report describing it.
+ */
+let lastWebTabId: number | null = null
+
 function hostOf(url: string): string {
   try {
     return new URL(url).hostname
@@ -59,6 +69,7 @@ async function hydrate(): Promise<void> {
     const tabs = await chrome.tabs.query({})
     for (const tab of tabs) {
       if (tab.id !== undefined && tab.url) tabHosts.set(tab.id, hostOf(tab.url))
+      if (tab.active && tab.id !== undefined && isScannable(tab.url ?? '')) lastWebTabId = tab.id
     }
   } catch {
     // Tab enumeration can fail during startup; navigation events refill it.
@@ -126,6 +137,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
   if (changeInfo.status !== 'complete') return
   if (!isScannable(url) || !shouldCollect(tabId)) return
+  if (tab.active) lastWebTabId = tabId
 
   void (async () => {
     recordEvidence(tabId, { url, hostname: hostOf(url) })
@@ -140,12 +152,26 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       recordEvidence(tabId, { responseHeaders: await recoverResponseHeaders(url) })
     }
 
-    await setBadge(tabId, (await detectForTab(tabId)).length)
+    const detections = await detectForTab(tabId)
+    await setBadge(tabId, detections.length)
+    if (settings.historyEnabled) await recordScan(hostOf(url), url, detections)
+  })()
+})
+
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  void (async () => {
+    try {
+      const tab = await chrome.tabs.get(tabId)
+      if (isScannable(tab.url ?? '')) lastWebTabId = tabId
+    } catch {
+      // The tab can close between the event and the lookup.
+    }
   })()
 })
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabHosts.delete(tabId)
+  if (lastWebTabId === tabId) lastWebTabId = null
   void clearEvidence(tabId)
 })
 
@@ -178,20 +204,34 @@ async function resolveTargetTab(): Promise<chrome.tabs.Tab | undefined> {
   const [active] = await chrome.tabs.query({ active: true, currentWindow: true })
   if (active && !isExtensionPage(active.url)) return active
 
-  const [lastFocused] = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
-  if (lastFocused && !isExtensionPage(lastFocused.url)) return lastFocused
+  // Asked from one of the extension's own pages: describe the page the user was
+  // last on, which is what they opened the report or panel to look at.
+  if (lastWebTabId !== null) {
+    try {
+      const remembered = await chrome.tabs.get(lastWebTabId)
+      if (isScannable(remembered.url ?? '')) return remembered
+    } catch {
+      lastWebTabId = null
+    }
+  }
 
   const anyActive = await chrome.tabs.query({ active: true })
-  return anyActive.find((candidate) => !isExtensionPage(candidate.url)) ?? active
+  const web = anyActive.find((candidate) => !isExtensionPage(candidate.url))
+  if (web) return web
+
+  // Last resort: any open web page at all, newest first.
+  const all = await chrome.tabs.query({})
+  return [...all].reverse().find((candidate) => isScannable(candidate.url ?? '')) ?? active
 }
 
-async function buildPanelState(): Promise<PanelState> {
+async function buildPanelState({ refresh = false } = {}): Promise<PanelState> {
   settings = await getSettings()
   const tab = await resolveTargetTab()
 
   const url = tab?.url ?? ''
   const hostname = hostOf(url)
   const base = {
+    tabId: tab?.id ?? null,
     hostname,
     url,
     detections: [] as Detection[],
@@ -205,19 +245,24 @@ async function buildPanelState(): Promise<PanelState> {
     return { ...base, status: 'disabled' }
   }
 
-  // Probes always re-run when the panel opens. The panel can be opened before a
-  // page finishes loading, and a single-page app can mount new widgets long
-  // after it does, so reading the DOM now is the only way to be sure the panel
+  // Probes re-run whenever the panel is opened. The panel can be opened before
+  // a page finishes loading, and a single-page app can mount new widgets long
+  // after it does, so reading the DOM then is the only way to be sure the panel
   // describes the page as it currently stands.
-  await runProbes(tab.id)
-  recordEvidence(tab.id, { url, hostname, cookieNames: await collectCookieNames(url) })
+  //
+  // Skipped on a refresh, which exists precisely because evidence changed — and
+  // which must not write, or it would retrigger the listener that asked for it.
+  if (!refresh) {
+    await runProbes(tab.id)
+    recordEvidence(tab.id, { url, hostname, cookieNames: await collectCookieNames(url) })
 
-  // Recover main-document headers if the navigation outran the worker's
-  // listeners. Without this the entire Hosting category silently disappears on
-  // the first page viewed after the browser starts.
-  const seen = await flushAndRead(tab.id)
-  if (seen && Object.keys(seen.responseHeaders).length === 0) {
-    recordEvidence(tab.id, { responseHeaders: await recoverResponseHeaders(url) })
+    // Recover main-document headers if the navigation outran the worker's
+    // listeners. Without this the entire Hosting category silently disappears
+    // on the first page viewed after the browser starts.
+    const seen = await flushAndRead(tab.id)
+    if (seen && Object.keys(seen.responseHeaders).length === 0) {
+      recordEvidence(tab.id, { responseHeaders: await recoverResponseHeaders(url) })
+    }
   }
 
   const current = (await flushAndRead(tab.id)) ?? emptyEvidence(url, hostname)
@@ -238,7 +283,7 @@ chrome.runtime.onMessage.addListener(
       try {
         switch (request.type) {
           case 'GET_PANEL_STATE': {
-            sendResponse({ ok: true, state: await buildPanelState() })
+            sendResponse({ ok: true, state: await buildPanelState({ refresh: request.refresh }) })
             return
           }
           case 'RUN_DEEP_SCAN': {
@@ -271,6 +316,27 @@ chrome.runtime.onMessage.addListener(
           case 'SET_ENABLED': {
             settings = await saveSettings({ enabled: request.enabled })
             sendResponse({ ok: true, settings })
+            return
+          }
+          case 'SET_HISTORY_ENABLED': {
+            settings = await saveSettings({ historyEnabled: request.enabled })
+            // Switching it off discards what was already kept, rather than
+            // merely hiding it behind a preference.
+            if (!request.enabled) await clearHistory()
+            sendResponse({ ok: true, settings })
+            return
+          }
+          case 'GET_HISTORY': {
+            sendResponse({ ok: true, history: await getHistory() })
+            return
+          }
+          case 'CLEAR_HISTORY': {
+            await clearHistory()
+            sendResponse({ ok: true, history: [] })
+            return
+          }
+          case 'FORGET_SITE': {
+            sendResponse({ ok: true, history: await removeFromHistory(request.hostname) })
             return
           }
           case 'GET_SETTINGS': {

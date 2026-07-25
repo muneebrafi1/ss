@@ -19,7 +19,7 @@ Click the StackLens icon on any site and see the tools behind it, grouped and
 readable: hosting, database, authentication, payments, analytics, email,
 support, and the AI services underneath modern products.
 
-**Over 300 technologies detected across 26 categories**
+**383 technologies detected across 26 categories**
 
 - **AI** — OpenAI, Anthropic, Gemini, Mistral, DeepSeek, Groq, Replicate,
   Hugging Face, and the SDKs that call them
@@ -48,9 +48,18 @@ loaded.
 
 - No account, no server, no analytics, no tracking of any kind
 - Nothing about the sites you visit is ever transmitted anywhere
+- Scan history is stored on your device only, and can be cleared or switched off
 - Cookie and storage **names** are read to identify services; **values never are**
 - Brand logos are bundled in the extension, so no third party learns what you scan
 - Turn it off globally, or per site, whenever you like
+
+**More than a popup**
+
+- **Panel** — what this site is, at a glance
+- **Full report** — the same stack as a page, with descriptions and exports
+- **History** — every site you visit and what it uses, searchable, on your device only
+- **Technologies** — browse everything StackLens can detect
+- **Settings** — switches for scanning and history, and per-site exceptions
 
 **Also useful for**
 

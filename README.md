@@ -81,17 +81,35 @@ src/
   types.ts              Evidence, Signal, Fingerprint, Detection + tuning constants
   engine/               match · score · version · detect   (pure, no chrome.*)
   fingerprints/         26 category files + validation
-  background/           service worker, collector, store, probes, deep scan
+  background/           service worker, collector, store, probes, deep scan, history
   popup/                the 400x600 panel
+  report/               the current site as a full page
+  history/              locally stored record of scanned sites
+  technologies/         searchable catalogue of everything detectable
   options/  welcome/    settings and first-run pages
+  ui/                   shared page frame, list, error boundary
   lib/                  grouping, export, share image
 tests/
   *.test.ts             unit + fixture replay
-  e2e/                  Chrome integration, real extension, real panel
+  e2e/                  run · functions · pages — real extension in real Chrome
   fixtures/             Evidence captured by the e2e run
 store/                  privacy policy, permission justifications, listing copy
 landing/                one-page site
 ```
+
+## Surfaces
+
+| Surface | Purpose |
+|---|---|
+| **Panel** (toolbar, `Alt+Shift+S`) | What is this site, at a glance |
+| **Report** | The same stack as a full page: descriptions visible, share-card preview, exports |
+| **History** | What every site you visited was built with. Local only, searchable, clearable |
+| **Technologies** | The whole detectable catalogue, searchable and filterable by category |
+| **Settings** | Scanning and history switches, per-site exceptions, the privacy position |
+| **Welcome** | First run: pin the icon, what it can and cannot see |
+
+The panel answers a question in a glance; the pages are for reading, searching
+and exporting, which a 400px box is the wrong shape for.
 
 ## Adding a technology
 
@@ -142,12 +160,15 @@ captured from a live Chrome session is run back through `detect()`, so a
 careless pattern change makes a detection disappear in CI with no browser
 involved.
 
-`npm run test:e2e` loads the built extension into Chrome and drives the real
-panel across six shapes of website — a modern AI SaaS, a WordPress blog with
+`npm run test:e2e` runs three browser suites against the built extension in real
+Chrome. `run.mjs` drives the panel across six shapes of website — a modern AI SaaS, a WordPress blog with
 WooCommerce, a Shopify store, a single-page app, a bare HTML page, and a page
 that refuses script downloads — plus the per-site off switch and an unsupported
-page. 59 checks in all, including the privacy guarantee that no cookie value is
-ever stored.
+page. `functions.mjs` exercises every user-facing action — the share image is
+downloaded and measured to prove it is not a blank canvas, and each export is
+opened and read. `pages.mjs` clicks through the report, history, technologies and
+settings pages. 105 browser checks in all, including the privacy guarantee that
+no cookie value is ever stored.
 
 Chrome is launched with `--host-resolver-rules` mapping every hostname to the
 fixture server, so the page genuinely requests `api.openai.com` and the
