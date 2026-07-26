@@ -77,16 +77,20 @@ Developer Tools
 
 English
 
-## Screenshots needed (1280x800 or 640x400)
+## Screenshots
 
-1. Panel open on a modern AI startup, showing the core stack
-2. Expanded view with "12 more tools" revealed
-3. Deep scan result surfacing model names
-4. Dark theme
-5. Settings page showing the privacy statement
+Five, ready to upload, in `store/screenshots/` at 1280x800:
 
-`screenshots/` holds captures from the end-to-end run at the panel's true
-400x600 size; these need to be composed onto a 1280x800 canvas before upload.
+1. `1-panel.png` — the panel on a modern AI startup
+2. `2-deep-scan.png` — deep scan surfacing model names
+3. `3-dark.png` — dark theme
+4. `4-report.png` — the report page with the share card
+5. `5-catalogue.png` — the technology catalogue
+
+Regenerate with `npm run store:shots` after any UI change. It composes the
+captures `npm run test:e2e` takes from the real extension in real Chrome, and
+places each at 1:1 rather than upscaling — a 400px panel stretched to fill 1280
+would misrepresent what the product looks like.
 
 ## Notes for the reviewer
 

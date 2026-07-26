@@ -14,7 +14,8 @@
     "test:e2e": "npm run build && node tests/e2e/run.mjs && node tests/e2e/functions.mjs && node tests/e2e/pages.mjs",
     "verify": "npm run test && npm run test:e2e",
     "dev": "vite build --watch",
-    "icons:gallery": "node scripts/icon-gallery.mjs && node tests/e2e/icons.mjs"
+    "icons:gallery": "node scripts/icon-gallery.mjs && node tests/e2e/icons.mjs",
+    "store:shots": "node scripts/make-store-shots.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

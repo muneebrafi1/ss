@@ -208,6 +208,16 @@
   }
 
   /*
+   * Keyboard focus reveals it immediately. The hover delay exists so tooltips
+   * do not flash while a pointer crosses the grid; a deliberate tab stop has no
+   * such problem, and waiting a third of a second after it would just read as
+   * lag.
+   */
+  .group:focus-within .sl-tip {
+    transition-delay: 0ms;
+  }
+
+  /*
    * Fades the top and bottom of the scroll area so cut-off content reads as
    * continuing rather than as a hard edge.
    */

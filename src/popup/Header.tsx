@@ -42,6 +42,7 @@ export function Header({
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -49,15 +50,28 @@ export function Header({
       if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false)
     }
     function onEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setMenuOpen(false)
+      if (event.key !== 'Escape') return
+      // Closing unmounts the focused item; without handing focus back to the
+      // trigger it fell to <body>, and in a 400px popup that means starting
+      // the tab order over to reach anything at all.
+      setMenuOpen(false)
+      triggerRef.current?.focus()
     }
+    function onFocusOut(event: FocusEvent) {
+      const next = event.relatedTarget as Node | null
+      if (next && !menuRef.current?.contains(next)) setMenuOpen(false)
+    }
+
+    const node = menuRef.current
     // Deferred so the click that opened the menu does not immediately close it.
     const timer = setTimeout(() => document.addEventListener('click', onDocumentClick))
     document.addEventListener('keydown', onEscape)
+    node?.addEventListener('focusout', onFocusOut)
     return () => {
       clearTimeout(timer)
       document.removeEventListener('click', onDocumentClick)
       document.removeEventListener('keydown', onEscape)
+      node?.removeEventListener('focusout', onFocusOut)
     }
   }, [menuOpen])
 
@@ -77,11 +91,13 @@ export function Header({
 
       <div className="relative shrink-0" ref={menuRef}>
         <button
+          ref={triggerRef}
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
           data-menu="pages"
           aria-label="More options and pages"
           title="Pages and settings"
+          aria-haspopup="menu"
           aria-expanded={menuOpen}
           className="grid h-6 w-6 place-items-center rounded-btn text-muted transition-colors hover:bg-card hover:text-ink dark:text-muted-dark dark:hover:bg-card-dark dark:hover:text-ink-dark"
         >

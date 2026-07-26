@@ -92,6 +92,14 @@ export function ToolCard({
         type="button"
         onClick={open}
         data-tool={label}
+        /*
+         * The tooltip is the only place a tile's description exists — the wide
+         * and half variants print it as ordinary text, but a tile has no room.
+         * Without this link it was pointer-only: a keyboard or screen-reader
+         * user tabbing through the dense case, which is most of a rich site's
+         * panel, never got it at all.
+         */
+        aria-describedby={`sl-desc-${detection.id}`}
         style={{ '--i': index } as React.CSSProperties}
         className={`${shell} flex h-[88px] flex-col items-center justify-center gap-1.5 px-1.5`}
       >
@@ -115,8 +123,9 @@ export function ToolCard({
       </button>
 
       <span
+        id={`sl-desc-${detection.id}`}
         role="tooltip"
-        className={`sl-tip pointer-events-none absolute bottom-full z-10 mb-1.5 w-max max-w-[190px] rounded-btn bg-ink px-2 py-1.5 text-xs leading-snug text-bg opacity-0 group-hover:opacity-100 dark:bg-ink-dark dark:text-bg-dark ${tooltipPosition}`}
+        className={`sl-tip pointer-events-none absolute bottom-full z-10 mb-1.5 w-max max-w-[190px] rounded-btn bg-ink px-2 py-1.5 text-xs leading-snug text-bg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-ink-dark dark:text-bg-dark ${tooltipPosition}`}
       >
         {detection.description}
       </span>

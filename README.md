@@ -126,7 +126,8 @@ tests/
   *.test.ts             unit + fixture replay + design-system guards
   e2e/                  run · functions · pages — real extension in real Chrome
   fixtures/             Evidence captured by the e2e run
-store/                  privacy policy, permission justifications, listing copy
+store/                  privacy policy, permission justifications, listing copy,
+                        upload-ready 1280x800 screenshots
 landing/                one-page site
 ```
 

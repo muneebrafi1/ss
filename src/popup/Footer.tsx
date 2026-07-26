@@ -16,6 +16,8 @@ function FooterButton({
   title,
   active,
   dimWhenDisabled = true,
+  buttonRef,
+  expanded,
   children,
 }: {
   onClick: () => void
@@ -30,14 +32,20 @@ function FooterButton({
    * result worth reading — dimming it hid the payoff of the action.
    */
   dimWhenDisabled?: boolean
+  buttonRef?: React.RefObject<HTMLButtonElement>
+  expanded?: boolean
   children: React.ReactNode
 }) {
   return (
     <button
+      ref={buttonRef}
       type="button"
       onClick={onClick}
       disabled={disabled}
       title={title}
+      {...(expanded === undefined
+        ? {}
+        : { 'aria-haspopup': 'menu' as const, 'aria-expanded': expanded })}
       className={`flex items-center gap-1.5 rounded-btn px-2 py-1.5 text-sm font-medium transition-colors disabled:hover:bg-transparent ${dimWhenDisabled ? 'disabled:opacity-40' : ''} ${
         active
           ? 'text-accent dark:text-accent-dark'
@@ -52,9 +60,12 @@ function FooterButton({
 function Menu({
   items,
   onClose,
+  returnFocusTo,
 }: {
   items: { label: string; run: () => void }[]
   onClose: () => void
+  /** The control that opened this menu, so focus can be handed back to it. */
+  returnFocusTo: React.RefObject<HTMLButtonElement>
 }) {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -63,17 +74,34 @@ function Menu({
       if (!ref.current?.contains(event.target as Node)) onClose()
     }
     function onEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose()
+      if (event.key !== 'Escape') return
+      /*
+       * Closing unmounts whichever item the user is standing on, so without
+       * handing focus back to the trigger it fell to <body> — and in a 400px
+       * popup that means tabbing from the very top again to reach anything.
+       */
+      onClose()
+      returnFocusTo.current?.focus()
     }
+    function onFocusOut(event: FocusEvent) {
+      // Tabbing past the last item used to leave an open popover behind the
+      // focus ring, with no pointer nearby to dismiss it.
+      const next = event.relatedTarget as Node | null
+      if (next && !ref.current?.contains(next) && next !== returnFocusTo.current) onClose()
+    }
+
+    const node = ref.current
     // Deferred so the click that opened the menu does not immediately close it.
     const timer = setTimeout(() => document.addEventListener('click', onDocumentClick))
     document.addEventListener('keydown', onEscape)
+    node?.addEventListener('focusout', onFocusOut)
     return () => {
       clearTimeout(timer)
       document.removeEventListener('click', onDocumentClick)
       document.removeEventListener('keydown', onEscape)
+      node?.removeEventListener('focusout', onFocusOut)
     }
-  }, [onClose])
+  }, [onClose, returnFocusTo])
 
   return (
     <div
@@ -130,6 +158,8 @@ export function Footer({
   onDeepScan: () => void
 }) {
   const [menu, setMenu] = useState<'export' | 'share' | null>(null)
+  const exportRef = useRef<HTMLButtonElement>(null)
+  const shareRef = useRef<HTMLButtonElement>(null)
   const [toast, setToast] = useState<string | null>(null)
 
   function flash(message: string) {
@@ -196,6 +226,19 @@ export function Footer({
         </div>
       )}
 
+      {/*
+        The one live region in the panel.
+        
+        Everything asynchronous here changes a button label or paints a toast —
+        both silent to a screen reader, and the deep-scan outcome is the single
+        thing a user pressed a button specifically to learn. `sr-only` rather
+        than hidden, because an aria-live region has to be in the accessibility
+        tree to announce anything.
+      */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {toast ?? (scanning ? 'Deep scan running' : deepScanned || scanFailed ? scanLabel : '')}
+      </p>
+
       <FooterButton
         onClick={onDeepScan}
         disabled={scanning || scanSpent}
@@ -229,6 +272,8 @@ export function Footer({
           onClick={() => setMenu(menu === 'export' ? null : 'export')}
           disabled={!hasResults}
           title="Export the detected stack"
+          buttonRef={exportRef}
+          expanded={menu === 'export'}
         >
           <svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
             <path d="M7 1.8v7M4.2 6.2L7 9l2.8-2.8M2 11.2h10" />
@@ -237,6 +282,7 @@ export function Footer({
         </FooterButton>
         {menu === 'export' && (
           <Menu
+            returnFocusTo={exportRef}
             onClose={() => setMenu(null)}
             items={[
               {
@@ -258,6 +304,8 @@ export function Footer({
           onClick={() => setMenu(menu === 'share' ? null : 'share')}
           disabled={!hasResults}
           title="Share this stack as an image"
+          buttonRef={shareRef}
+          expanded={menu === 'share'}
         >
           <svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
             <rect x="1.8" y="2.6" width="10.4" height="8.8" rx="1.4" />
@@ -267,6 +315,7 @@ export function Footer({
         </FooterButton>
         {menu === 'share' && (
           <Menu
+            returnFocusTo={shareRef}
             onClose={() => setMenu(null)}
             items={[
               {
