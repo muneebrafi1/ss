@@ -229,13 +229,20 @@ async function buildPanelState({ refresh = false } = {}): Promise<PanelState> {
   const tab = await resolveTargetTab()
 
   const url = tab?.url ?? ''
-  const hostname = hostOf(url)
+  /*
+   * Only real pages get a hostname. `new URL()` happily parses the authority of
+   * a non-special scheme, so `chrome://newtab/` yielded "newtab" and every
+   * surface presented it as a site — h1 on the report page, favicon in the
+   * panel header. Blanking it lets the existing "No site" fallbacks fire.
+   */
+  const hostname = isScannable(url) ? hostOf(url) : ''
   const base = {
     tabId: tab?.id ?? null,
     hostname,
     url,
     detections: [] as Detection[],
     deepScanned: false,
+    deepScan: null,
     settings,
   }
 
@@ -292,8 +299,22 @@ chrome.runtime.onMessage.addListener(
               return
             }
             const evidence = await flushAndRead(tab.id)
-            if (evidence) await runDeepScan(tab.id, evidence)
-            sendResponse({ ok: true, state: await buildPanelState() })
+            const outcome = evidence ? await runDeepScan(tab.id, evidence) : null
+            const state = await buildPanelState()
+
+            /*
+             * Deep scan's whole reason to exist is recovering detections that
+             * passive collection cannot see — and those were the only ones the
+             * product forgot. `recordScan` had exactly one call site, in the
+             * navigation handler, using the pre-scan set, and the evidence
+             * holding the bundle-only detections is discarded on the next
+             * navigation. So the headline results never reached History.
+             */
+            if (settings.historyEnabled && state.status === 'ready' && state.hostname) {
+              await recordScan(state.hostname, state.url, state.detections)
+            }
+
+            sendResponse({ ok: true, state: { ...state, deepScan: outcome } })
             return
           }
           case 'SET_HOST_ENABLED': {

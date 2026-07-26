@@ -39,7 +39,7 @@ export function ToolCard({
   }
 
   const shell =
-    'sl-rise sl-card w-full cursor-pointer rounded-card border border-line bg-card hover:bg-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 dark:border-line-dark dark:bg-card-dark dark:hover:bg-card-hover-dark dark:focus-visible:ring-accent-dark/40'
+    'sl-rise sl-card w-full cursor-pointer rounded-card border border-line bg-card hover:bg-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg dark:focus-visible:ring-accent-dark dark:focus-visible:ring-offset-bg-dark dark:border-line-dark dark:bg-card-dark dark:hover:bg-card-hover-dark'
 
   /*
    * What the card says, as one string on the element itself.
@@ -68,10 +68,10 @@ export function ToolCard({
             model id leading the second line reads as the more specific answer
             rather than as an interruption.
           */}
-          <span className="block truncate text-[12.5px] font-medium leading-tight text-ink dark:text-ink-dark">
+          <span className="block truncate text-base font-medium leading-tight text-ink dark:text-ink-dark">
             {detection.name}
           </span>
-          <span className="mt-0.5 block truncate text-[11px] leading-tight text-muted dark:text-muted-dark">
+          <span className="mt-0.5 block truncate text-xs leading-tight text-muted dark:text-muted-dark">
             {version && (
               <span className="font-medium text-ink/70 dark:text-ink-dark/70">{version} · </span>
             )}
@@ -103,11 +103,11 @@ export function ToolCard({
             clipped both; stacked, the name is always readable and the id
             truncates on its own.
           */}
-          <span className="block truncate text-[12.5px] font-medium text-ink dark:text-ink-dark">
+          <span className="block truncate text-base font-medium text-ink dark:text-ink-dark">
             {detection.name}
           </span>
           {version && (
-            <span className="mt-px block truncate text-[10.5px] font-normal text-muted dark:text-muted-dark">
+            <span className="mt-px block truncate text-2xs font-normal text-muted dark:text-muted-dark">
               {version}
             </span>
           )}
@@ -116,7 +116,7 @@ export function ToolCard({
 
       <span
         role="tooltip"
-        className={`sl-tip pointer-events-none absolute bottom-full z-10 mb-1.5 w-max max-w-[190px] rounded-btn bg-ink px-2 py-1.5 text-[11px] leading-snug text-bg opacity-0 group-hover:opacity-100 dark:bg-ink-dark dark:text-bg-dark ${tooltipPosition}`}
+        className={`sl-tip pointer-events-none absolute bottom-full z-10 mb-1.5 w-max max-w-[190px] rounded-btn bg-ink px-2 py-1.5 text-xs leading-snug text-bg opacity-0 group-hover:opacity-100 dark:bg-ink-dark dark:text-bg-dark ${tooltipPosition}`}
       >
         {detection.description}
       </span>

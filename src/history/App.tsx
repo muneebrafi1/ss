@@ -65,6 +65,7 @@ export function HistoryApp() {
   async function forget(hostname: string) {
     const response = await sendMessage({ type: 'FORGET_SITE', hostname })
     if (response.ok && 'history' in response) setEntries(response.history)
+    else setEntries([])
   }
 
   async function toggleHistory(enabled: boolean) {
@@ -105,7 +106,7 @@ export function HistoryApp() {
       }
     >
       {entries === null ? (
-        <p className="py-10 text-center text-[13px] text-muted dark:text-muted-dark">Loading…</p>
+        <p className="py-10 text-center text-base text-muted dark:text-muted-dark">Loading…</p>
       ) : total === 0 ? (
         <EmptyPanel
           title={settings?.historyEnabled ? 'No sites yet' : 'History is off'}
@@ -127,7 +128,7 @@ export function HistoryApp() {
               <div className="flex items-center gap-2.5">
                 <SiteIcon url={entry.url ?? ''} size={20} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-medium">
+                  <span className="block truncate text-lg font-medium">
                     {entry.url ? (
                       <a
                         href={entry.url}
@@ -141,7 +142,7 @@ export function HistoryApp() {
                       entry.hostname
                     )}
                   </span>
-                  <span className="text-[12px] text-muted dark:text-muted-dark">
+                  <span className="text-sm text-muted dark:text-muted-dark">
                     {entry.technologies.length}{' '}
                     {entry.technologies.length === 1 ? 'technology' : 'technologies'} ·{' '}
                     {relativeTime(entry.at)}
@@ -157,7 +158,7 @@ export function HistoryApp() {
                   onClick={() => void forget(entry.hostname)}
                   aria-label={`Forget ${entry.hostname}`}
                   title={`Forget ${entry.hostname}`}
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-btn text-muted/60 transition-colors hover:bg-card hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 dark:text-muted-dark/60 dark:hover:bg-card-dark dark:hover:text-ink-dark"
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-btn text-muted transition-colors hover:bg-card hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg dark:focus-visible:ring-accent-dark dark:focus-visible:ring-offset-bg-dark dark:text-muted-dark dark:hover:bg-card-dark dark:hover:text-ink-dark"
                 >
                   <svg
                     viewBox="0 0 14 14"
@@ -182,11 +183,11 @@ export function HistoryApp() {
                     className="flex items-center gap-1.5 rounded-btn border border-line py-1 pl-1 pr-2 dark:border-line-dark"
                   >
                     <ToolLogo icon={tech.icon} name={tech.name} size={18} tile />
-                    <span className="text-[11px] text-muted dark:text-muted-dark">{tech.name}</span>
+                    <span className="text-xs text-muted dark:text-muted-dark">{tech.name}</span>
                   </span>
                 ))}
                 {entry.technologies.length > 14 && (
-                  <span className="text-[11px] text-muted dark:text-muted-dark">
+                  <span className="text-xs text-muted dark:text-muted-dark">
                     +{entry.technologies.length - 14}
                   </span>
                 )}

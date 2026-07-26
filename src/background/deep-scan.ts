@@ -127,6 +127,15 @@ export async function runDeepScan(tabId: number, evidence: Evidence): Promise<De
     }
   }
 
-  recordEvidence(tabId, { bundles, deepScanned: true })
+  /*
+   * `deepScanned` is set only when something was actually read.
+   *
+   * It gates every `bundle` signal in the engine, and the panel also uses it to
+   * decide the button is spent. Setting it after a scan where every fetch
+   * failed — a CORS-blocked bundle, a 404, an 8s timeout, an offline browser —
+   * left the user permanently unable to retry the one action that reaches the
+   * network, on the strength of a scan that read nothing.
+   */
+  if (bundles.length > 0) recordEvidence(tabId, { bundles, deepScanned: true })
   return { scanned: bundles.length, bytes, skipped }
 }

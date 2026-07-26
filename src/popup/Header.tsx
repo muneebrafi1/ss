@@ -10,10 +10,11 @@ import { SiteIcon } from '@/ui/Page'
  * no way to turn one off from the place they were actually looking at it.
  */
 
+/** Names match what each destination calls itself in src/ui/Page.tsx. */
 const PAGES = [
-  { file: 'report.html', label: 'Full report' },
+  { file: 'report.html', label: 'This site' },
   { file: 'history.html', label: 'History' },
-  { file: 'technologies.html', label: 'All technologies' },
+  { file: 'technologies.html', label: 'Technologies' },
 ] as const
 
 function MenuItem({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
@@ -21,7 +22,7 @@ function MenuItem({ onClick, children }: { onClick: () => void; children: React.
     <button
       type="button"
       onClick={onClick}
-      className="block w-full px-3 py-1.5 text-left text-[12px] text-ink transition-colors hover:bg-card dark:text-ink-dark dark:hover:bg-card-hover-dark"
+      className="block w-full px-3 py-1.5 text-left text-sm text-ink transition-colors hover:bg-card dark:text-ink-dark dark:hover:bg-card-hover-dark"
     >
       {children}
     </button>
@@ -64,12 +65,12 @@ export function Header({
     <header className="relative flex items-center gap-2.5 border-b border-line px-3.5 py-2.5 dark:border-line-dark">
       <SiteIcon url={url} size={18} />
 
-      <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink dark:text-ink-dark">
+      <p className="min-w-0 flex-1 truncate text-base font-medium text-ink dark:text-ink-dark">
         {hostname || 'No site'}
       </p>
 
       {count !== null && count > 0 && (
-        <span className="shrink-0 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-accent dark:bg-accent-dark/15 dark:text-accent-dark">
+        <span className="shrink-0 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-accent dark:bg-accent-dark/15 dark:text-accent-dark">
           {count}
         </span>
       )}
@@ -78,7 +79,9 @@ export function Header({
         <button
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
-          aria-label="More options"
+          data-menu="pages"
+          aria-label="More options and pages"
+          title="Pages and settings"
           aria-expanded={menuOpen}
           className="grid h-6 w-6 place-items-center rounded-btn text-muted transition-colors hover:bg-card hover:text-ink dark:text-muted-dark dark:hover:bg-card-dark dark:hover:text-ink-dark"
         >

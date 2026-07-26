@@ -35,7 +35,7 @@ export function MoreSection({
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="mb-3 flex w-full items-center gap-2 border-t border-line pt-3 text-[12px] font-medium text-muted transition-colors hover:text-ink dark:border-line-dark dark:text-muted-dark dark:hover:text-ink-dark"
+        className="mb-3 flex w-full items-center gap-2 border-t border-line pt-3 text-sm font-medium text-muted transition-colors hover:text-ink dark:border-line-dark dark:text-muted-dark dark:hover:text-ink-dark"
       >
         <svg
           viewBox="0 0 12 12"

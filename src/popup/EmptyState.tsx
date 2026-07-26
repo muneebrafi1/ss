@@ -24,8 +24,8 @@ export function EmptyState({
         </svg>
       </span>
 
-      <p className="text-[13px] font-medium text-ink dark:text-ink-dark">Nothing detected here</p>
-      <p className="mt-1.5 max-w-[250px] text-[12px] leading-relaxed text-muted dark:text-muted-dark">
+      <p className="text-base font-medium text-ink dark:text-ink-dark">Nothing detected here</p>
+      <p className="mt-1.5 max-w-[250px] text-sm leading-relaxed text-muted dark:text-muted-dark">
         This site may use tools we can&apos;t detect from the browser.
       </p>
 
@@ -34,7 +34,7 @@ export function EmptyState({
           type="button"
           onClick={onDeepScan}
           disabled={scanning}
-          className="mt-4 rounded-btn border border-line px-3 py-1.5 text-[12px] font-medium text-ink transition-colors hover:bg-card disabled:opacity-50 dark:border-line-dark dark:text-ink-dark dark:hover:bg-card-dark"
+          className="mt-4 rounded-btn border border-line px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-card disabled:opacity-50 dark:border-line-dark dark:text-ink-dark dark:hover:bg-card-dark"
         >
           {scanning ? 'Scanning…' : 'Try a deep scan'}
         </button>

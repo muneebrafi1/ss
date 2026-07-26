@@ -275,6 +275,27 @@ try {
     const body = await popup.textContent('body')
     check('deep scan fails gracefully rather than throwing', !!body && body.length > 0)
     check('panel is still usable after a failed scan', (await popup.$('footer')) !== null)
+
+    /*
+     * This fixture serves 403 for every .js request, so nothing can be read.
+     * The panel used to report "Nothing more" here — a positive claim about
+     * JavaScript it never downloaded — and then latch the button disabled so
+     * the claim could not be challenged.
+     */
+    const footer = (await popup.textContent('footer'))?.trim() ?? ''
+    check(
+      'says the scripts could not be read, not that they held nothing',
+      footer.includes("Couldn't read scripts"),
+      footer,
+    )
+    check('does not claim the scan found nothing new', !footer.includes('Nothing more'))
+
+    const retry = await popup.$('button:has-text("Couldn\u2019t read scripts")')
+      ?? await popup.$("button:has-text(\"Couldn't read scripts\")")
+    check(
+      'a scan that read nothing stays retryable',
+      retry !== null && !(await retry.isDisabled()),
+    )
   }
   await closeExtras()
 
@@ -311,7 +332,7 @@ try {
   console.log('\n=== 7. Per-site off switch ===')
   {
     const { popup, tabId } = await inspect(SITES.modern, { settle: 1500 })
-    await popup.click('button[aria-label="More options"]')
+    await popup.click('button[data-menu="pages"]')
     await popup.waitForTimeout(300)
     await popup.click('button:has-text("Turn off for this site")')
     await popup.waitForTimeout(1200)

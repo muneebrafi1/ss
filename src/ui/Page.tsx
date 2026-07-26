@@ -109,7 +109,7 @@ export function Page({
         <div className="mx-auto flex max-w-4xl items-center gap-6 px-6 py-3">
           <a href="report.html" className="flex items-center gap-2 no-underline">
             <Logo />
-            <span className="text-[14px] font-semibold tracking-[-0.01em] text-ink dark:text-ink-dark">
+            <span className="text-lg font-semibold tracking-[-0.01em] text-ink dark:text-ink-dark">
               StackLens
             </span>
           </a>
@@ -119,7 +119,7 @@ export function Page({
                 key={item.id}
                 href={item.href}
                 aria-current={item.id === current ? 'page' : undefined}
-                className={`rounded-btn px-2.5 py-1.5 text-[13px] no-underline transition-colors ${
+                className={`rounded-btn px-2.5 py-1.5 text-base no-underline transition-colors ${
                   item.id === current
                     ? 'bg-card font-medium text-ink dark:bg-card-dark dark:text-ink-dark'
                     : 'text-muted hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark'
@@ -135,9 +135,9 @@ export function Page({
       <main className="mx-auto max-w-4xl px-6 py-8">
         <header className="mb-7 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-[22px] font-semibold tracking-[-0.02em]">{title}</h1>
+            <h1 className="text-2xl font-semibold tracking-[-0.02em]">{title}</h1>
             {subtitle && (
-              <p className="mt-1 text-[13px] text-muted dark:text-muted-dark">{subtitle}</p>
+              <p className="mt-1 text-base text-muted dark:text-muted-dark">{subtitle}</p>
             )}
           </div>
           {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -173,7 +173,7 @@ export function Button({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-btn border px-3 py-1.5 text-[13px] font-medium transition-colors disabled:opacity-40 ${styles}`}
+      className={`rounded-btn border px-3 py-1.5 text-base font-medium transition-colors disabled:opacity-40 ${styles}`}
     >
       {children}
     </button>
@@ -211,7 +211,7 @@ export function SearchInput({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-8 w-full min-w-[220px] rounded-btn border border-line bg-card pl-8 pr-3 text-[13px] text-ink placeholder:text-muted focus:border-accent/40 focus:outline-none focus:ring-2 focus:ring-accent/15 dark:border-line-dark dark:bg-card-dark dark:text-ink-dark dark:placeholder:text-muted-dark dark:focus:border-accent-dark/40 dark:focus:ring-accent-dark/20 [&::-webkit-search-cancel-button]:hidden"
+        className="h-8 w-full min-w-[220px] rounded-btn border border-line bg-card pl-8 pr-3 text-base text-ink placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-line-dark dark:bg-card-dark dark:text-ink-dark dark:placeholder:text-muted-dark dark:focus:border-accent-dark dark:focus:ring-accent-dark/35 [&::-webkit-search-cancel-button]:hidden"
       />
     </div>
   )
@@ -220,8 +220,8 @@ export function SearchInput({
 export function EmptyPanel({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
   return (
     <div className="rounded-card border border-line px-6 py-16 text-center dark:border-line-dark">
-      <p className="text-[14px] font-medium">{title}</p>
-      <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-relaxed text-muted dark:text-muted-dark">
+      <p className="text-lg font-medium">{title}</p>
+      <p className="mx-auto mt-1.5 max-w-sm text-base leading-relaxed text-muted dark:text-muted-dark">
         {body}
       </p>
       {action && <div className="mt-4 flex justify-center">{action}</div>}
@@ -245,7 +245,7 @@ export function Toast({ message }: { message: string | null }) {
   return (
     <div
       role="status"
-      className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-btn bg-ink px-3 py-2 text-[12px] text-bg dark:bg-ink-dark dark:text-bg-dark"
+      className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-btn bg-ink px-3 py-2 text-sm text-bg dark:bg-ink-dark dark:text-bg-dark"
     >
       {message}
     </div>

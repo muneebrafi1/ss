@@ -4,7 +4,7 @@
     "{}",
     "{}"
   ],
-  "collectedAt": 1785025345732,
+  "collectedAt": 1785029798417,
   "cookieNames": [
     "__stripe_mid",
     "__clerk_db_jwt",
@@ -33,11 +33,6 @@
   "inlineScripts": [],
   "metas": {},
   "requests": [
-    "app.fixture.test/_next/static/chunks/main-app.js",
-    "js.stripe.com/v3",
-    "static.hotjar.com/c/hotjar-123.js",
-    "api.openai.com/v1/chat/completions",
-    "app.posthog.com/e/?ip=1",
     "clerk.app.fixture.test.accounts.dev/v1/client",
     "abcdefgh.supabase.co/rest/v1/posts?select=*",
     "o12345.ingest.sentry.io/api/1/envelope/?sentry_key=abc",
@@ -47,13 +42,18 @@
     "api.elevenlabs.io/v1/text-to-speech/voice",
     "res.cloudinary.com/demo/image/upload/sample.jpg",
     "app.fixture.test/favicon.ico",
+    "app.fixture.test/_next/static/chunks/main-app.js",
+    "js.stripe.com/v3",
+    "static.hotjar.com/c/hotjar-123.js",
+    "api.openai.com/v1/chat/completions",
+    "app.posthog.com/e/?ip=1",
     "cdn.segment.com/"
   ],
   "responseHeaders": {
     "access-control-allow-origin": "*",
     "connection": "keep-alive",
     "content-type": "text/html; charset=utf-8",
-    "date": "Sun, 26 Jul 2026 00:22:21 GMT",
+    "date": "Sun, 26 Jul 2026 01:36:34 GMT",
     "keep-alive": "timeout=5",
     "server": "Vercel",
     "transfer-encoding": "chunked",

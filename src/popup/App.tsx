@@ -26,8 +26,8 @@ function Shell({ children }: { children: React.ReactNode }) {
 function Notice({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-10 pb-6 text-center">
-      <p className="text-[13px] font-medium text-ink dark:text-ink-dark">{title}</p>
-      <p className="mt-1.5 max-w-[250px] text-[12px] leading-relaxed text-muted dark:text-muted-dark">
+      <p className="text-base font-medium text-ink dark:text-ink-dark">{title}</p>
+      <p className="mt-1.5 max-w-[250px] text-sm leading-relaxed text-muted dark:text-muted-dark">
         {body}
       </p>
       {action}
@@ -35,12 +35,21 @@ function Notice({ title, body, action }: { title: string; body: string; action?:
   )
 }
 
-function OutlineButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+function OutlineButton({
+  onClick,
+  title,
+  children,
+}: {
+  onClick: () => void
+  title?: string
+  children: React.ReactNode
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="mt-4 rounded-btn border border-line px-3 py-1.5 text-[12px] font-medium text-ink transition-colors hover:bg-card dark:border-line-dark dark:text-ink-dark dark:hover:bg-card-dark"
+      title={title}
+      className="mt-4 rounded-btn border border-line px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-card dark:border-line-dark dark:text-ink-dark dark:hover:bg-card-dark"
     >
       {children}
     </button>
@@ -63,13 +72,28 @@ export function App() {
   const [state, setState] = useState<PanelState | null>(null)
   const [scanning, setScanning] = useState(false)
   const [scanGain, setScanGain] = useState<number | null>(null)
+  const [scanFailed, setScanFailed] = useState(false)
+  /*
+   * Latched here rather than read off `state` on every render.
+   *
+   * The outcome describes the scan this popup just ran, not the tab. Reading it
+   * from `PanelState` meant the very next refresh — and the storage listener
+   * fires one within 400ms of any evidence change — replaced it with the `null`
+   * that `buildPanelState` always returns, so the honest label appeared and
+   * vanished before it could be read.
+   */
+  const [scanOutcome, setScanOutcome] = useState<PanelState['deepScan']>(null)
   const [query, setQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async (refresh = false) => {
     const response = await sendMessage({ type: 'GET_PANEL_STATE', refresh })
-    if (response.ok && 'state' in response) setState(response.state)
-    else if (!response.ok) setError(response.error)
+    if (response.ok && 'state' in response) {
+      setState(response.state)
+      setError(null)
+    } else if (!response.ok) {
+      setError(response.error)
+    }
   }, [])
 
   useEffect(() => {
@@ -105,15 +129,29 @@ export function App() {
   }, [tabId, load])
 
   async function runDeepScan() {
-    if (!state) return
+    if (!state || scanning) return
     setScanning(true)
+    setScanFailed(false)
     const before = state.detections.length
-    const response = await sendMessage({ type: 'RUN_DEEP_SCAN' })
-    if (response.ok && 'state' in response) {
-      setState(response.state)
-      setScanGain(response.state.detections.length - before)
+    try {
+      const response = await sendMessage({ type: 'RUN_DEEP_SCAN' })
+      if (response.ok && 'state' in response) {
+        setState(response.state)
+        setScanGain(response.state.detections.length - before)
+        setScanOutcome(response.state.deepScan)
+      } else {
+        // Without this branch a failure reverted to a state pixel-identical to
+        // before the click, so the one control that reaches the network gave no
+        // feedback whatsoever when it did not work.
+        setScanFailed(true)
+      }
+    } catch {
+      setScanFailed(true)
+    } finally {
+      // `finally`, because a rejected message used to leave the spinner turning
+      // for the life of the popup.
+      setScanning(false)
     }
-    setScanning(false)
   }
 
   async function setSiteEnabled(enabled: boolean) {
@@ -139,8 +177,23 @@ export function App() {
   if (error) {
     return (
       <Shell>
-        <Header hostname="" url="" count={null} />
-        <Notice title="Something went wrong" body={error} />
+        {/*
+          The header keeps the site it already knows — passing empty strings made
+          the panel claim "No site" about a page it could name. And the body is a
+          fixed sentence: `error` carries internal strings like "No active tab",
+          which are diagnostics, not prose. It is kept as the button's title so
+          it is still recoverable when someone needs it.
+        */}
+        <Header hostname={state?.hostname ?? ''} url={state?.url ?? ''} count={null} />
+        <Notice
+          title="StackLens couldn't read this page"
+          body="This usually clears by itself — the extension may have just been updated or reloaded."
+          action={
+            <OutlineButton onClick={() => void load(true)} title={error}>
+              Try again
+            </OutlineButton>
+          }
+        />
       </Shell>
     )
   }
@@ -253,6 +306,8 @@ export function App() {
         deepScanned={state.deepScanned}
         scanning={scanning}
         scanGain={scanGain}
+        scanFailed={scanFailed}
+        outcome={scanOutcome}
         onDeepScan={() => void runDeepScan()}
       />
     </Shell>

@@ -211,6 +211,69 @@ try {
     await page.close()
   }
 
+  console.log('\n=== Welcome page ===')
+  {
+    const page = await openPage(extensionId, 'welcome.html')
+    const body = await page.textContent('body')
+    check('names the other surfaces', ['History', 'Technologies'].every((l) => body?.includes(l)))
+    check('links to them', (await page.$$('a[href$=".html"]')).length >= 3)
+    check(
+      'discloses the one thing that uses the network',
+      body?.includes('Deep scan') ?? false,
+    )
+
+    /*
+     * Captured in both themes because this page had none, and that is exactly
+     * why it shipped painting its background on a 672px column — in dark mode a
+     * dark band floating in white gutters, on the first screen of the product.
+     */
+    await page.screenshot({ path: resolve(root, 'screenshots/welcome-light.png') })
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: resolve(root, 'screenshots/welcome-dark.png') })
+
+    // The wrapper must cover the viewport, not just the reading column.
+    const covers = await page.evaluate(() => {
+      const root = document.querySelector('#root > div')
+      return root ? root.getBoundingClientRect().width >= window.innerWidth - 1 : false
+    })
+    check('background covers the viewport, not just the column', covers)
+    await page.emulateMedia({ colorScheme: 'light' })
+    await page.close()
+  }
+
+  console.log('\n=== Dead ends offer a way out ===')
+  {
+    /*
+     * Driven through the real settings UI rather than by messaging the worker —
+     * a service worker does not receive its own `runtime.sendMessage`, and this
+     * is the path a user actually takes anyway.
+     */
+    const settings = await openPage(extensionId, 'options.html')
+    await settings.click('button[role="switch"]')
+    await settings.waitForTimeout(600)
+    await settings.close()
+
+    const page = await openPage(extensionId, 'report.html')
+    const body = await page.textContent('body')
+    check(
+      'names the global switch rather than blaming the site',
+      (body?.includes('off everywhere') ?? false) && !body?.includes('for this site'),
+      body?.replace(/\s+/g, ' ').slice(60, 190).trim(),
+    )
+    check(
+      'offers a control instead of only prose',
+      (await page.$('button:has-text("Open settings")')) !== null,
+    )
+    await page.close()
+
+    // Leave scanning on for whatever runs after this.
+    const restore = await openPage(extensionId, 'options.html')
+    await restore.click('button[role="switch"]')
+    await restore.waitForTimeout(600)
+    await restore.close()
+  }
+
   console.log('\n=== Navigation between pages ===')
   {
     const page = await openPage(extensionId, 'report.html')
@@ -243,14 +306,14 @@ try {
     await sleep(700)
     const popup = context.pages().find((p) => p.url().includes('popup.html'))
     await popup.waitForTimeout(2000)
-    await popup.click('button[aria-label="More options"]')
+    await popup.click('button[data-menu="pages"]')
     await popup.waitForTimeout(300)
     const menu = await popup.textContent('body')
     check('menu lists the pages',
-      ['Full report', 'History', 'All technologies', 'Settings'].every((l) => menu?.includes(l)))
+      ['This site', 'History', 'Technologies', 'Settings'].every((l) => menu?.includes(l)))
 
     const before = context.pages().length
-    await popup.click('button:has-text("Full report")')
+    await popup.click('button:has-text("This site")')
     await sleep(1200)
     check('menu opens the report page', context.pages().length > before)
   }

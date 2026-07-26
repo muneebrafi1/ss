@@ -7,6 +7,7 @@ import {
   type ExportFormat,
 } from '@/lib/export'
 import { copyShareCard, downloadShareCard } from '@/lib/share-image'
+import type { DeepScanOutcome } from '@/background/deep-scan'
 import type { Detection } from '@/types'
 
 function FooterButton({
@@ -14,12 +15,21 @@ function FooterButton({
   disabled,
   title,
   active,
+  dimWhenDisabled = true,
   children,
 }: {
   onClick: () => void
   disabled?: boolean
   title: string
   active?: boolean
+  /**
+   * Whether being disabled should also mean being faint.
+   *
+   * For Export and Share, dim correctly means unavailable. For the deep-scan
+   * button once it has run, "disabled" means "already done" and the label is a
+   * result worth reading — dimming it hid the payoff of the action.
+   */
+  dimWhenDisabled?: boolean
   children: React.ReactNode
 }) {
   return (
@@ -28,7 +38,7 @@ function FooterButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`flex items-center gap-1.5 rounded-btn px-2 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-40 disabled:hover:bg-transparent ${
+      className={`flex items-center gap-1.5 rounded-btn px-2 py-1.5 text-sm font-medium transition-colors disabled:hover:bg-transparent ${dimWhenDisabled ? 'disabled:opacity-40' : ''} ${
         active
           ? 'text-accent dark:text-accent-dark'
           : 'text-muted hover:bg-card hover:text-ink dark:text-muted-dark dark:hover:bg-card-dark dark:hover:text-ink-dark'
@@ -78,7 +88,7 @@ function Menu({
             item.run()
             onClose()
           }}
-          className="block w-full px-3 py-1.5 text-left text-[12px] text-ink transition-colors hover:bg-card dark:text-ink-dark dark:hover:bg-card-hover-dark"
+          className="block w-full px-3 py-1.5 text-left text-sm text-ink transition-colors hover:bg-card dark:text-ink-dark dark:hover:bg-card-hover-dark"
         >
           {item.label}
         </button>
@@ -101,6 +111,8 @@ export function Footer({
   deepScanned,
   scanning,
   scanGain,
+  scanFailed,
+  outcome,
   onDeepScan,
 }: {
   hostname: string
@@ -111,6 +123,10 @@ export function Footer({
   scanning: boolean
   /** How many technologies the last deep scan added, or null if it has not run. */
   scanGain: number | null
+  /** The last attempt could not complete at all. */
+  scanFailed: boolean
+  /** What the last scan actually read, or null if none has run. */
+  outcome: DeepScanOutcome | null
   onDeepScan: () => void
 }) {
   const [menu, setMenu] = useState<'export' | 'share' | null>(null)
@@ -127,35 +143,69 @@ export function Footer({
   }
 
   const hasResults = detections.length > 0
+
+  /*
+   * What the scan actually did, rather than what its effect on the count was.
+   *
+   * "Nothing more" used to be derived purely from the detection delta, so a
+   * scan in which every bundle was CORS-blocked, 404'd or timed out rendered
+   * identically to one that read every file and genuinely found nothing new —
+   * and the tooltip went further, asserting the site's JavaScript "held nothing
+   * StackLens could not already see" about scripts it may never have
+   * downloaded. The outcome object was being computed and thrown away.
+   */
+  const readNothing = outcome !== null && outcome.scanned === 0
+  const unreadable = scanFailed || (readNothing && outcome.skipped > 0)
+  const nothingToRead = readNothing && outcome.skipped === 0
+
   const scanLabel = scanning
     ? 'Scanning…'
-    : deepScanned
-      ? scanGain === null
-        ? 'Scanned'
-        : scanGain > 0
-          ? `Found ${scanGain} more`
-          : 'Nothing more'
-      : 'Deep scan'
+    : unreadable
+      ? "Couldn't read scripts"
+      : nothingToRead
+        ? 'No scripts to scan'
+        : deepScanned
+          ? scanGain === null
+            ? 'Scanned'
+            : scanGain > 0
+              ? `Found ${scanGain} more`
+              : 'Nothing more'
+          : 'Deep scan'
+
+  const scanTitle = scanning
+    ? 'Downloading and searching this page\u2019s scripts'
+    : unreadable
+      ? 'This page\u2019s scripts could not be downloaded \u2014 they may be blocked, or the network may be unavailable. Press to try again.'
+      : nothingToRead
+        ? 'This page loads no first-party JavaScript for StackLens to search'
+        : deepScanned
+          ? scanGain === 0
+            ? 'The scripts were read in full and held nothing new'
+            : 'Deep scan already run for this page'
+          : "Download and search this site's JavaScript for more tools"
+
+  // A scan that read nothing must stay retryable — the failure is usually
+  // transient, and it was previously latched forever by `deepScanned`.
+  const scanSpent = deepScanned && !unreadable && !nothingToRead
 
   return (
     <footer className="relative flex items-center gap-0.5 border-t border-line px-2 py-1.5 dark:border-line-dark">
       {toast && (
-        <div className="absolute inset-x-0 -top-9 mx-auto w-max rounded-btn bg-ink px-2.5 py-1.5 text-[11px] text-bg dark:bg-ink-dark dark:text-bg-dark">
+        <div className="absolute inset-x-0 -top-9 mx-auto w-max rounded-btn bg-ink px-2.5 py-1.5 text-xs text-bg dark:bg-ink-dark dark:text-bg-dark">
           {toast}
         </div>
       )}
 
       <FooterButton
         onClick={onDeepScan}
-        disabled={scanning || deepScanned}
-        active={scanning || (deepScanned && (scanGain ?? 0) > 0)}
-        title={
-          deepScanned
-            ? scanGain === 0
-              ? "This site's JavaScript held nothing StackLens could not already see"
-              : 'Deep scan already run for this page'
-            : "Download and search this site's JavaScript for more tools"
-        }
+        disabled={scanning || scanSpent}
+        active={scanning || (scanSpent && (scanGain ?? 0) > 0)}
+        // The result is the string the user pressed the button to read, so it
+        // must not inherit `disabled:opacity-40`. At 40% the accent computes to
+        // ~2:1 — the least legible text in a bar where "Export" and "Share" are
+        // fully readable.
+        dimWhenDisabled={!scanSpent}
+        title={scanTitle}
       >
         <svg
           viewBox="0 0 14 14"

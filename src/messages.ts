@@ -1,4 +1,5 @@
 import type { Detection } from '@/types'
+import type { DeepScanOutcome } from '@/background/deep-scan'
 import type { Settings } from '@/background/settings'
 import type { HistoryEntry } from '@/background/history'
 
@@ -25,6 +26,15 @@ export interface PanelState {
   url: string
   detections: Detection[]
   deepScanned: boolean
+  /**
+   * What the last deep scan on this page actually did, or null if none has run.
+   *
+   * Carried so the panel can distinguish "read the scripts and found nothing
+   * new" from "could not read the scripts at all". Without it both rendered as
+   * "Nothing more", which asserts a fact about JavaScript that may never have
+   * been downloaded.
+   */
+  deepScan: DeepScanOutcome | null
   settings: Settings
 }
 
@@ -50,6 +60,26 @@ export type Response =
   | { ok: true; history: HistoryEntry[] }
   | { ok: false; error: string }
 
-export function sendMessage(request: Request): Promise<Response> {
-  return chrome.runtime.sendMessage(request) as Promise<Response>
+/**
+ * Sends a message and always resolves.
+ *
+ * `chrome.runtime.sendMessage` REJECTS when the service worker cannot answer —
+ * most commonly "Extension context invalidated", which every user hits the
+ * moment the extension is reloaded or updated with a page already open. Every
+ * caller here treats the result as a value and checks `ok`, so a rejection
+ * escaped as an unhandled promise and left whichever surface asked parked on
+ * its loading state for good. Turning the rejection into `{ ok: false }` means
+ * the failure reaches the code that knows how to show it.
+ */
+export async function sendMessage(request: Request): Promise<Response> {
+  try {
+    const response = (await chrome.runtime.sendMessage(request)) as Response | undefined
+    if (!response) return { ok: false, error: 'No response from StackLens' }
+    return response
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'StackLens is not responding',
+    }
+  }
 }

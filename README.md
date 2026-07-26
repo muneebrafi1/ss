@@ -121,8 +121,9 @@ src/
   options/  welcome/    settings and first-run pages
   ui/                   shared page frame, list, error boundary
   lib/                  grouping, summary, export, share image, brand
+  styles.css            design tokens: colour, type scale, radii, motion
 tests/
-  *.test.ts             unit + fixture replay
+  *.test.ts             unit + fixture replay + design-system guards
   e2e/                  run · functions · pages — real extension in real Chrome
   fixtures/             Evidence captured by the e2e run
 store/                  privacy policy, permission justifications, listing copy
@@ -214,7 +215,7 @@ band as well as overall, and each export is opened and read. `pages.mjs` clicks
 through the report, history, technologies and settings pages — including a
 geometric check that the settings toggle's knob sits inside its track in both
 states, which is the only kind of assertion that would have caught the knob
-shipping outside its own control. 156 browser checks
+shipping outside its own control. 165 browser checks
 in all, including the privacy guarantee that no cookie value is ever stored.
 
 Three of those checks exist to prove the widened collection is real rather than
@@ -234,6 +235,21 @@ right. It is also where the request budget's shape is asserted directly. The pag
 issues one call to `js.stripe.com` *after* 1,500 calls to a single API host; under
 a flat first-come cap that call is dropped and the site's payment provider
 disappears, so the suite checks that Stripe survives.
+
+### The design system, checked at the source
+
+`tests/design.test.ts` computes WCAG contrast for every colour-token pair and
+fails below 4.5:1 for text and 3:1 for focus indicators, and asserts that no
+`text-[Npx]` remains anywhere in `src/`.
+
+Both rules exist because what they check went wrong silently and survived
+several rounds of review. The interface reached **ten distinct font sizes** —
+including 12.5px and 10.5px — each added while tuning one surface in isolation.
+And four controls, the panel's primary one among them, removed the browser's
+focus ring and replaced it with `ring-accent/40`: **2.03:1**, against a 3:1
+requirement. Nothing about either looks wrong in a diff, and neither is visible
+to a test that drives the UI, because the interface works perfectly — it is just
+not readable.
 
 Chrome is launched with `--host-resolver-rules` mapping every hostname to the
 fixture server, so the page genuinely requests `api.openai.com` and the

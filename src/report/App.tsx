@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   FILE_EXTENSION,
   copyToClipboard,
@@ -6,7 +6,12 @@ import {
   formatExport,
   type ExportFormat,
 } from '@/lib/export'
-import { downloadShareCard, renderShareCard, type ShareFormat } from '@/lib/share-image'
+import {
+  copyShareCard,
+  downloadShareCard,
+  renderShareCard,
+  type ShareFormat,
+} from '@/lib/share-image'
 import { stackSummary } from '@/lib/summary'
 import { sendMessage, type PanelState } from '@/messages'
 import { Button, EmptyPanel, Page, Toast, useToast } from '@/ui/Page'
@@ -30,14 +35,21 @@ export function ReportApp() {
   const [state, setState] = useState<PanelState | null>(null)
   const [format, setFormat] = useState<ShareFormat>('landscape')
   const [preview, setPreview] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
   const [toast, flash] = useToast()
 
-  useEffect(() => {
-    void (async () => {
-      const response = await sendMessage({ type: 'GET_PANEL_STATE' })
-      if (response.ok && 'state' in response) setState(response.state)
-    })()
+  const load = useCallback(async () => {
+    setFailed(false)
+    const response = await sendMessage({ type: 'GET_PANEL_STATE' })
+    if (response.ok && 'state' in response) setState(response.state)
+    // Without this branch `state` stays null — the same value that renders
+    // "Loading…" — so a failed round-trip displayed forever as work in progress.
+    else setFailed(true)
   }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
 
   // The share card is drawn from the same bundled artwork as the page, so the
   // preview is the actual output rather than an impression of it.
@@ -58,6 +70,24 @@ export function ReportApp() {
     }
   }, [state, format])
 
+  async function enableSite() {
+    if (!state) return
+    const response = await sendMessage({
+      type: 'SET_HOST_ENABLED',
+      hostname: state.hostname,
+      enabled: true,
+    })
+    if (response.ok && 'state' in response) setState(response.state)
+  }
+
+  // Resolves through `resolveTargetTab` in the worker, which exists precisely so
+  // the extension's own pages can act on the page the user came from.
+  async function deepScan() {
+    const response = await sendMessage({ type: 'RUN_DEEP_SCAN' })
+    if (response.ok && 'state' in response) setState(response.state)
+    else flash('Deep scan failed')
+  }
+
   function exportAs(exportFormat: ExportFormat) {
     if (!state) return
     downloadText(
@@ -77,21 +107,53 @@ export function ReportApp() {
       title={state?.hostname || 'This site'}
       subtitle={unsupported ? undefined : summary ? `${summary} · ${countLabel}` : countLabel}
     >
-      {!state ? (
-        <p className="py-10 text-center text-[13px] text-muted dark:text-muted-dark">Loading…</p>
-      ) : unsupported ? (
+      {failed ? (
         <EmptyPanel
-          title={state.status === 'disabled' ? 'Scanning is off here' : 'No site to report on'}
-          body={
-            state.status === 'disabled'
-              ? 'Turn StackLens back on for this site to see its stack.'
-              : 'Open a website in the active tab, then come back to this page.'
-          }
+          title="StackLens couldn't read this page"
+          body="This usually clears by itself — the extension may have just been updated or reloaded."
+          action={<Button onClick={() => void load()}>Try again</Button>}
         />
+      ) : !state ? (
+        <p className="py-10 text-center text-base text-muted dark:text-muted-dark">Loading…</p>
+      ) : unsupported ? (
+        /*
+          Global-off and per-site-off used to collapse into one message, so a
+          user who had switched StackLens off entirely was told to turn *this
+          site* back on — and given nothing to click either way. `EmptyPanel`
+          has taken an `action` since it was written; all four call sites
+          ignored it.
+        */
+        state.status === 'disabled' && !state.settings.enabled ? (
+          <EmptyPanel
+            title="Scanning is off"
+            body="StackLens is switched off everywhere. Turn it back on to see what this site is built with."
+            action={
+              <Button variant="primary" onClick={() => void chrome.runtime.openOptionsPage()}>
+                Open settings
+              </Button>
+            }
+          />
+        ) : state.status === 'disabled' ? (
+          <EmptyPanel
+            title={`Scanning is off for ${state.hostname}`}
+            body="Nothing is being collected here."
+            action={
+              <Button variant="primary" onClick={() => void enableSite()}>
+                Turn on for {state.hostname}
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyPanel
+            title="No site to report on"
+            body="Open a website in the active tab, then come back to this page."
+          />
+        )
       ) : detections.length === 0 ? (
         <EmptyPanel
           title="Nothing detected here"
-          body="This site may use tools we can't detect from the browser. Try a deep scan from the panel."
+          body="This site may use tools we can't detect from the browser. A deep scan searches the page's own JavaScript."
+          action={<Button variant="primary" onClick={() => void deepScan()}>Run deep scan</Button>}
         />
       ) : (
         <>
@@ -115,13 +177,14 @@ export function ReportApp() {
                   }`}
                 />
               )}
-              <figcaption className="mt-2 text-[12px] text-muted dark:text-muted-dark">
-                The same image the panel copies.
+              <figcaption className="mt-2 text-sm text-muted dark:text-muted-dark">
+                {format === 'square' ? '1080 × 1080' : '1200 × 630'} · drawn from the same bundled
+                logos as this page.
               </figcaption>
             </figure>
 
             <div>
-              <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted dark:text-muted-dark">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted dark:text-muted-dark">
                 Share
               </h2>
 
@@ -134,7 +197,7 @@ export function ReportApp() {
                     title={option.hint}
                     aria-pressed={format === option.id}
                     onClick={() => setFormat(option.id)}
-                    className={`rounded-[5px] px-3 py-1 text-[12px] font-medium transition-colors ${
+                    className={`rounded-[5px] px-3 py-1 text-sm font-medium transition-colors ${
                       format === option.id
                         ? 'bg-ink text-bg dark:bg-ink-dark dark:text-bg-dark'
                         : 'text-muted hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark'
@@ -144,11 +207,16 @@ export function ReportApp() {
                   </button>
                 ))}
               </div>
-              <p className="mt-1.5 text-[12px] text-muted dark:text-muted-dark">
+              <p className="mt-1.5 text-sm text-muted dark:text-muted-dark">
                 {FORMATS.find((option) => option.id === format)?.hint}
               </p>
 
-              <div className="mt-3">
+              {/*
+                Copy lives here now. The caption used to send the reader to the
+                panel for an action this page could perform all along —
+                `copyShareCard` takes the same input the download already builds.
+              */}
+              <div className="mt-3 flex flex-wrap gap-2">
                 <Button
                   variant="primary"
                   onClick={() =>
@@ -160,11 +228,23 @@ export function ReportApp() {
                     })
                   }
                 >
-                  Download image
+                  Download
+                </Button>
+                <Button
+                  onClick={() =>
+                    void copyShareCard({
+                      hostname: state.hostname,
+                      url: state.url,
+                      detections,
+                      format,
+                    }).then((ok) => flash(ok ? 'Image copied' : 'Copy failed'))
+                  }
+                >
+                  Copy image
                 </Button>
               </div>
 
-              <h2 className="mt-7 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted dark:text-muted-dark">
+              <h2 className="mt-7 text-xs font-semibold uppercase tracking-[0.08em] text-muted dark:text-muted-dark">
                 Export
               </h2>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -195,7 +275,7 @@ export function ReportApp() {
             }))}
           />
 
-          <p className="mt-8 border-t border-line pt-5 text-[12px] leading-relaxed text-muted dark:border-line-dark dark:text-muted-dark">
+          <p className="mt-8 border-t border-line pt-5 text-sm leading-relaxed text-muted dark:border-line-dark dark:text-muted-dark">
             StackLens shows a technology only when there is real evidence for it. Tools a site
             uses only on its servers — most AI model calls among them — cannot be seen from the
             browser at all, so this is what the page reveals rather than everything it runs.

@@ -49,7 +49,7 @@ export function TechList({
 
   if (groups.length === 0) {
     return (
-      <p className="py-10 text-center text-[13px] text-muted dark:text-muted-dark">
+      <p className="py-10 text-center text-base text-muted dark:text-muted-dark">
         {emptyLabel ?? 'Nothing to show.'}
       </p>
     )
@@ -60,10 +60,10 @@ export function TechList({
       {groups.map((group) => (
         <section key={group.category.id}>
           <div className="mb-2 flex items-baseline gap-2">
-            <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted dark:text-muted-dark">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted dark:text-muted-dark">
               {group.category.name}
             </h2>
-            <span className="text-[10px] tabular-nums text-muted/70 dark:text-muted-dark/70">
+            <span className="text-2xs tabular-nums text-muted dark:text-muted-dark">
               {group.items.length}
             </span>
           </div>
@@ -83,11 +83,11 @@ export function TechList({
                     <ToolLogo icon={item.icon} name={item.name} size={30} tile />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5">
-                        <span className="truncate text-[13px] font-medium text-ink dark:text-ink-dark">
+                        <span className="truncate text-base font-medium text-ink dark:text-ink-dark">
                           {item.name}
                         </span>
                         {version && (
-                          <span className="shrink-0 text-[12px] font-normal text-muted dark:text-muted-dark">
+                          <span className="shrink-0 text-sm font-normal text-muted dark:text-muted-dark">
                             {version}
                           </span>
                         )}
@@ -106,14 +106,14 @@ export function TechList({
                             stroke="currentColor"
                             strokeWidth="1.5"
                             strokeLinecap="round"
-                            className="shrink-0 text-muted/70 dark:text-muted-dark/70"
+                            className="shrink-0 text-muted dark:text-muted-dark"
                           >
                             <path d="M5 2.5h6.5V9M11.5 2.5 4 10" />
                           </svg>
                         )}
                       </span>
                       {item.description && (
-                        <span className="mt-0.5 block truncate text-[12px] text-muted dark:text-muted-dark">
+                        <span className="mt-0.5 block truncate text-sm text-muted dark:text-muted-dark">
                           {item.description}
                         </span>
                       )}

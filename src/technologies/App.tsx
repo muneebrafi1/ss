@@ -62,11 +62,15 @@ export function TechnologiesApp() {
         reads as a single control someone is choosing within, instead of
         twenty-seven separate buttons competing with the list below them.
       */}
-      <div className="mb-6 flex flex-wrap gap-1.5 rounded-card border border-line p-2.5 dark:border-line-dark">
+      <div
+        role="group"
+        aria-label="Filter by category"
+        className="sticky top-[53px] z-20 mb-6 flex flex-wrap gap-1.5 rounded-card border border-line bg-bg/90 p-2.5 backdrop-blur dark:border-line-dark dark:bg-bg-dark/90"
+      >
         <button
           type="button"
           onClick={() => setCategory('all')}
-          className={`rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
+          className={`rounded-full border px-2.5 py-1 text-sm transition-colors ${
             category === 'all'
               ? 'border-transparent bg-ink text-bg dark:bg-ink-dark dark:text-bg-dark'
               : 'border-line text-muted hover:text-ink dark:border-line-dark dark:text-muted-dark dark:hover:text-ink-dark'
@@ -79,7 +83,8 @@ export function TechnologiesApp() {
             key={item.id}
             type="button"
             onClick={() => setCategory(item.id)}
-            className={`rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
+            aria-pressed={category === item.id}
+            className={`rounded-full border px-2.5 py-1 text-sm transition-colors ${
               category === item.id
                 ? 'border-transparent bg-ink text-bg dark:bg-ink-dark dark:text-bg-dark'
                 : 'border-line text-muted hover:text-ink dark:border-line-dark dark:text-muted-dark dark:hover:text-ink-dark'
@@ -92,7 +97,7 @@ export function TechnologiesApp() {
       </div>
 
       {query.trim() && (
-        <p className="mb-4 text-[12px] text-muted dark:text-muted-dark">
+        <p className="mb-4 text-sm text-muted dark:text-muted-dark">
           {filtered.length} {filtered.length === 1 ? 'match' : 'matches'}
         </p>
       )}

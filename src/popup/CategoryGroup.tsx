@@ -27,11 +27,11 @@ export function CategoryGroup({ group, startIndex }: { group: Group; startIndex:
   return (
     <section className="mb-3.5">
       <div className="mb-1.5 flex items-baseline gap-1.5">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted dark:text-muted-dark">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-muted dark:text-muted-dark">
           {group.category.name}
         </h2>
         {group.detections.length > 1 && (
-          <span className="text-[10px] font-medium tabular-nums text-muted/70 dark:text-muted-dark/70">
+          <span className="text-2xs font-medium tabular-nums text-muted dark:text-muted-dark">
             {group.detections.length}
           </span>
         )}
