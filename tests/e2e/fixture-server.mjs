@@ -28,6 +28,11 @@ export const SITES = {
   smallbiz: 'smallbiz.fixture.test',
   publisher: 'news.fixture.test',
   heavy: 'heavy.fixture.test',
+  // Hostile shapes: pages designed to break detection rather than exercise it.
+  decoy: 'decoy.fixture.test',
+  proxied: 'proxied.fixture.test',
+  walled: 'walled.fixture.test',
+  intl: 'xn--mgbh0fb-very-long-subdomain.fixture.test',
 }
 
 /* -------------------------------------------------------------------------- */
@@ -329,6 +334,111 @@ setTimeout(function () {
 }, 400);
 `
 
+
+/* -------------------------------------------------------------------------- */
+/* Hostile shapes                                                              */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * A page that talks about a stack without using it.
+ *
+ * The likeliest way a detector embarrasses itself is on a page *about*
+ * technology — a tutorial, a comparison post, a job ad. Every string below
+ * resembles a real signal without being one: prose naming products, a variable
+ * whose name contains a brand, paths that echo a CMS's layout. Detecting any of
+ * it would mean the database matches words rather than evidence.
+ */
+const DECOY_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="description" content="Comparing WordPress, Shopify and Webflow for small business sites">
+<title>Which CMS should you use?</title>
+<script src="/assets/article.js"></script>
+</head><body>
+<article>
+<h1>WordPress vs Shopify vs Webflow</h1>
+<p>We migrated off WordPress last year. Our old wp-content folder was 40GB.</p>
+<p>Shopify charges per transaction; Stripe and PayPal are cheaper if you self-host.</p>
+<p>Some teams pair Supabase with Clerk, or Firebase with Auth0. We use neither.</p>
+<pre><code>npm install @clerk/nextjs @supabase/supabase-js</code></pre>
+<p>Our own stack is boring: server-rendered Go templates and Postgres.</p>
+<img src="/images/wp-content-screenshot.png" alt="A WordPress admin screen">
+<a href="https://shopify.com/pricing">Shopify pricing</a>
+</article>
+</body></html>`
+
+const DECOY_BUNDLE = `
+// Names that merely contain brand words, of the kind a bundler or an author
+// writes without any of those products being present.
+var shopifyComparisonTable = {};
+var wordpressMigrationNotes = "wp-content";
+var stripeVsPaypalChart = null;
+window.articleMeta = { topics: ["wordpress", "shopify", "clerk", "supabase"] };
+`
+
+/*
+ * Everything proxied through first-party paths.
+ *
+ * Increasingly common, because it dodges ad blockers: analytics and error
+ * reporting are reverse-proxied under the site's own origin, so no vendor
+ * hostname is ever requested. There is genuinely nothing here identifying a
+ * vendor, and the honest outcome is to say so rather than guess from a path
+ * shape like `/api/collect`.
+ */
+const PROXIED_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Fixture proxied</title>
+<script src="/js/bundle.js"></script>
+<script src="/relay/a.js"></script>
+</head><body><div id="app"><h1>Proxied</h1></div></body></html>`
+
+const PROXIED_BUNDLE = `
+window.__APP__ = { build: "abc123" };
+fetch("/api/collect", {mode:"no-cors", method:"POST"}).catch(function(){});
+fetch("/relay/e", {mode:"no-cors", method:"POST"}).catch(function(){});
+fetch("/ingest/envelope", {mode:"no-cors", method:"POST"}).catch(function(){});
+// Paths a very large share of the web serves for reasons of its own. If any of
+// these alone names a vendor, the database is matching URL shapes rather than
+// evidence.
+fetch("/docs", {mode:"no-cors"}).catch(function(){});
+fetch("/api/auth/session", {mode:"no-cors"}).catch(function(){});
+fetch("/v1/chat/completions", {mode:"no-cors", method:"POST"}).catch(function(){});
+`
+
+/*
+ * A consent wall that loads nothing until the user agrees.
+ *
+ * The default state across the EU. Almost every third-party script is gated, so
+ * the evidence is close to empty — and the panel's answer has to be "we could
+ * not see much here", not a confident short list.
+ */
+const WALLED_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Fixture walled</title>
+<script src="http://cdn.cookielaw.org/scripttemplates/otSDKStub.js"></script>
+</head><body>
+<div id="onetrust-consent-sdk"><p>We use cookies.</p><button>Accept all</button></div>
+<div id="content" hidden><h1>Behind the wall</h1></div>
+</body></html>`
+
+/*
+ * Right-to-left content on a very long hostname.
+ *
+ * Exercises the parts of the UI that assume short Latin strings: the panel
+ * header, the report h1, and the share card's hostname truncation.
+ */
+const INTL_HTML = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="generator" content="WordPress 6.7.1">
+<title>\u0645\u062a\u062c\u0631 \u0627\u0644\u0623\u062f\u0648\u0627\u062a</title>
+<script src="/wp-includes/js/jquery/jquery-3.7.1.min.js"></script>
+<script src="/site.js"></script>
+</head><body class="rtl">
+<h1>\u0645\u0631\u062d\u0628\u0627 \u0628\u0643\u0645 \u0641\u064a \u0645\u062a\u062c\u0631\u0646\u0627</h1>
+<p>\u0646\u062d\u0646 \u0646\u0633\u062a\u062e\u062f\u0645 \u0623\u062f\u0648\u0627\u062a \u062d\u062f\u064a\u062b\u0629 \u0644\u0628\u0646\u0627\u0621 \u0645\u062a\u062c\u0631\u0646\u0627.</p>
+</body></html>`
+
+const INTL_BUNDLE = `
+window.jQuery = function(){}; window.jQuery.fn = { jquery: "3.7.1" };
+window.Stripe = function Stripe(){};
+fetch("http://js.stripe.com/v3/", {mode:"no-cors"}).catch(function(){});
+`
+
 /* -------------------------------------------------------------------------- */
 
 const SITE_CONFIG = {
@@ -386,6 +496,25 @@ const SITE_CONFIG = {
     cookies: ['wordpress_test_cookie=fixture; Path=/'],
   },
   [SITES.heavy]: { html: HEAVY_HTML, bundle: HEAVY_BUNDLE, headers: { server: 'nginx' }, cookies: [] },
+  [SITES.decoy]: {
+    html: DECOY_HTML,
+    bundle: DECOY_BUNDLE,
+    headers: { server: 'Caddy' },
+    cookies: [],
+  },
+  [SITES.proxied]: {
+    html: PROXIED_HTML,
+    bundle: PROXIED_BUNDLE,
+    headers: { server: 'nginx' },
+    cookies: [],
+  },
+  [SITES.walled]: { html: WALLED_HTML, bundle: '', headers: {}, cookies: [] },
+  [SITES.intl]: {
+    html: INTL_HTML,
+    bundle: INTL_BUNDLE,
+    headers: { server: 'Apache/2.4.62' },
+    cookies: [],
+  },
   [SITES.plain]: { html: PLAIN_HTML, bundle: '', headers: {}, cookies: [] },
   [SITES.locked]: {
     html: LOCKED_HTML,

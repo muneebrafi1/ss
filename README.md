@@ -206,7 +206,7 @@ careless pattern change makes a detection disappear in CI with no browser
 involved.
 
 `npm run test:e2e` runs three browser suites against the built extension in real
-Chrome. `run.mjs` drives the panel across eleven shapes of website — a modern AI SaaS, a
+Chrome. `run.mjs` drives the panel across fifteen shapes of website — a modern AI SaaS, a
 WordPress blog with WooCommerce, a Shopify store, a single-page app, a marketing
 site, a docs site, a site-builder small business, a publisher thick with ad tech,
 a bare HTML page, a page that refuses script downloads, and a deliberate stress
@@ -216,7 +216,7 @@ band as well as overall, and each export is opened and read. `pages.mjs` clicks
 through the report, history, technologies and settings pages — including a
 geometric check that the settings toggle's knob sits inside its track in both
 states, which is the only kind of assertion that would have caught the knob
-shipping outside its own control. 165 browser checks
+shipping outside its own control. 188 browser checks
 in all, including the privacy guarantee that no cookie value is ever stored.
 
 Three of those checks exist to prove the widened collection is real rather than
@@ -227,6 +227,30 @@ incidental, each isolating a path nothing else could reach:
 | modern | Segment | a `<link rel="preconnect">` that fetches nothing at all |
 | shopify | Google Tag Manager | an inline script 279,000 characters into the page, past the HTML cut |
 | spa | Cloudinary, Calendly | an `<img>` and an `<iframe>` declared in markup |
+
+### Fixtures built to make detection fail
+
+Four of the fifteen exist to break the detector rather than exercise it, because
+a suite made only of pages that work is a suite that agrees with you:
+
+| Fixture | Shape | What it is for |
+|---|---|---|
+| `decoy` | A tutorial comparing WordPress, Shopify and Stripe, using none of them | The likeliest way a detector embarrasses itself is on a page *about* technology |
+| `proxied` | Analytics reverse-proxied under first-party paths, no vendor hostname anywhere | Increasingly common, to dodge ad blockers — and by construction the vendor is hidden |
+| `walled` | A consent wall that gates every third-party script | The default state across the EU: almost no evidence to work from |
+| `intl` | Right-to-left Arabic on a 44-character hostname | Everything that assumes short Latin strings |
+
+`proxied` earned its place immediately. It exposed three false positives on a
+page containing none of those products: **PostHog** from `/ingest/envelope` —
+which is *Sentry's* proxy convention — **FastAPI** from `/docs`, one of the most
+common paths on the web, and **Auth.js** from `/api/auth/session`. Each was a
+path-shape heuristic weighted at or above the 0.60 display threshold, so each
+could carry a detection by itself.
+
+The rule that came out of it: **a first-party path may corroborate, but it must
+never carry.** Vendor-namespaced paths are exempt — `/wp-content/`,
+`/_vercel/insights/`, `/socket.io/?EIO=` and `/realms/…/openid-connect` name
+exactly one product and nothing else uses them. Generic ones do not.
 
 The **heavy** fixture is not a website; it is a stress page — 400 images from one
 CDN, 60 iframes, 1,500 XHRs, a 1.4MB document and 200KB of inline script. Every

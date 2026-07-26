@@ -80,7 +80,7 @@ export const AUTH: Fingerprint[] = [
     signals: [
       { type: 'cookie', pattern: /^(?:__Secure-)?(?:next-auth|authjs)\.session-token$/, weight: 0.95 },
       { type: 'cookie', pattern: /^(?:__Host-)?(?:next-auth|authjs)\.csrf-token$/, weight: 0.9 },
-      { type: 'request', pattern: /\/api\/auth\/(?:session|providers|csrf)/, weight: 0.8 },
+      { type: 'request', pattern: /\/api\/auth\/(?:session|providers|csrf)(?:$|\?)/, weight: 0.55 },
     ],
   },
   {
@@ -92,7 +92,7 @@ export const AUTH: Fingerprint[] = [
     website: 'https://better-auth.com',
     signals: [
       { type: 'cookie', pattern: /^(?:__Secure-)?better-auth\./, weight: 0.95 },
-      { type: 'request', pattern: /\/api\/auth\/get-session/, weight: 0.8 },
+      { type: 'request', pattern: /\/api\/auth\/get-session(?:$|\?)/, weight: 0.55 },
       { type: 'bundle', pattern: /better-auth\/(?:client|react)/, weight: 0.8 },
     ],
   },

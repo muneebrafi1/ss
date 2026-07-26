@@ -479,7 +479,78 @@ try {
   await closeExtras()
 
   /* ====================================================================== */
-  console.log('\n=== 13. Unsupported page ===')
+  console.log('\n=== 13. Hostile: a page about a stack it does not use ===')
+  {
+    const { popup } = await inspect(SITES.decoy)
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ') || '(none)'}`)
+
+    /*
+     * The likeliest way a detector embarrasses itself. Every brand word here is
+     * prose, a variable name or a link — a tutorial comparing products, which
+     * is a large slice of the web. Naming any of them would mean the database
+     * matches words rather than evidence.
+     */
+    for (const absent of [
+      'WordPress', 'Shopify', 'Webflow', 'Stripe', 'PayPal',
+      'Supabase', 'Clerk', 'Firebase', 'Auth0',
+    ]) {
+      check(`does not detect ${absent} from prose alone`, !names.some((n) => n.startsWith(absent)))
+    }
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 14. Hostile: everything proxied first-party ===')
+  {
+    const { popup } = await inspect(SITES.proxied)
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ') || '(none)'}`)
+
+    // Reverse-proxying analytics to dodge ad blockers is common and leaves no
+    // vendor hostname at all. `/api/collect` and `/ingest/envelope` look like
+    // several vendors and prove none of them.
+    for (const absent of [
+      'PostHog', 'Sentry', 'Plausible', 'Segment', 'Google Analytics',
+      'FastAPI', 'Auth.js', 'OpenAI',
+    ]) {
+      check(`does not guess ${absent} from a path shape`, !names.some((n) => n.startsWith(absent)))
+    }
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 15. Hostile: consent wall ===')
+  {
+    const { popup } = await inspect(SITES.walled, { settle: 1800 })
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ') || '(none)'}`)
+    check('finds the consent manager itself', names.some((n) => n.startsWith('OneTrust')))
+    check('does not invent what the wall is hiding', names.length <= 3, names.join(', '))
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 16. Hostile: RTL content on a very long hostname ===')
+  {
+    const { popup, tabId } = await inspect(SITES.intl)
+    const names = await readCards(popup)
+    console.log(`  detected (${names.length}): ${names.join(', ')}`)
+    check('detects through non-Latin content', names.some((n) => n.startsWith('WordPress')))
+    check('detects a global set on an RTL page', names.some((n) => n.startsWith('Stripe')))
+
+    // The header is 400px wide and the hostname is 44 characters.
+    const overflows = await popup.evaluate(() => {
+      const el = document.querySelector('header p')
+      return el ? el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).textOverflow !== 'ellipsis' : false
+    })
+    check('a 44-character hostname does not break the header', !overflows)
+    check('records the site under its real hostname', tabId !== null)
+  }
+  await closeExtras()
+
+  /* ====================================================================== */
+  console.log('\n=== 17. Unsupported page ===')
   {
     const page = await context.newPage()
     await page.goto('about:blank')

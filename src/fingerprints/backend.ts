@@ -94,7 +94,8 @@ export const BACKEND: Fingerprint[] = [
     implies: ['python'],
     signals: [
       { type: 'header', name: 'server', pattern: /uvicorn/i, weight: 0.75 },
-      { type: 'request', pattern: /\/(?:openapi\.json|docs|redoc)(?:$|\?)/, weight: 0.6 },
+      { type: 'request', pattern: /\/openapi\.json(?:$|\?)/, weight: 0.7 },
+      { type: 'request', pattern: /\/(?:docs|redoc)(?:$|\?)/, weight: 0.4 },
     ],
   },
   {

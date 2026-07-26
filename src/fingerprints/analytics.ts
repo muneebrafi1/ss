@@ -48,7 +48,7 @@ export const ANALYTICS: Fingerprint[] = [
       { type: 'request', pattern: /(?:^|\.)(?:app|us|eu)(?:-assets)?\.i?\.?posthog\.com/, weight: 0.9 },
       { type: 'script', pattern: /posthog(?:-js)?(?:\.min)?\.js|array\.js.{0,20}posthog/, weight: 0.9 },
       { type: 'cookie', pattern: /^ph_.*_posthog$/, weight: 0.9 },
-      { type: 'request', pattern: /\/(?:ingest|ph)\/(?:e|decide|s)\/?/, weight: 0.6 },
+      { type: 'request', pattern: /\/(?:ingest|ph)\/(?:e|decide|s)(?:\/|\?|$)/, weight: 0.5 },
     ],
   },
   {
