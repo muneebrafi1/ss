@@ -318,7 +318,14 @@ for (var i = 0; i < 1500; i++) {
   fetch("http://api.heavyapi.test/item/" + i, {mode:"no-cors"}).catch(function(){});
 }
 setTimeout(function () {
-  fetch("http://js.stripe.com/v3/", {mode:"no-cors"}).catch(function(){});
+  // An <img>, not a fetch. Chrome omits opaque no-cors fetches from Resource
+  // Timing entirely — measured — so that version of this rode on a single
+  // webRequest event and was order-dependent between runs. An image appears in
+  // Resource Timing *and* in the DOM, both of which the probe reads, so what is
+  // under test is the request budget rather than the browser's event timing.
+  var late = document.createElement("img");
+  late.src = "http://js.stripe.com/v3/late-arrival.png";
+  document.body.appendChild(late);
 }, 400);
 `
 

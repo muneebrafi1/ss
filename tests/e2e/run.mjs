@@ -90,6 +90,25 @@ async function readCards(popup) {
   return popup.$$eval('button[data-tool]', (nodes) => nodes.map((n) => n.dataset.tool ?? ''))
 }
 
+/**
+ * Waits for stored evidence to satisfy a predicate.
+ *
+ * The stress page is 1.4MB and issues 1,500 requests, so how long it takes to
+ * stop moving varies run to run. A fixed sleep tuned to one machine is how a
+ * check becomes flaky — this waits for the condition itself and still fails if
+ * it never arrives.
+ */
+async function waitForEvidence(tabId, predicate, timeout = 20000) {
+  const deadline = Date.now() + timeout
+  let latest = null
+  while (Date.now() < deadline) {
+    latest = await evidenceFor(tabId)
+    if (latest && predicate(latest)) return latest
+    await sleep(500)
+  }
+  return latest
+}
+
 const evidenceFor = (tabId) =>
   worker.evaluate(async (id) => {
     const stored = await chrome.storage.session.get(`tab:${id}`)
@@ -388,9 +407,7 @@ try {
     // in the probe are all recent, and an untested cap fails by silently
     // discarding evidence on exactly the large sites where it matters.
     const started = Date.now()
-    // This page is 1.4MB and issues 1,500 requests; four seconds was not enough
-    // for it to stop moving, which made the late-request check flaky.
-    const { popup, tabId } = await inspect(SITES.heavy, { settle: 7000 })
+    const { popup, tabId } = await inspect(SITES.heavy, { settle: 5000 })
     const elapsed = Date.now() - started
     const names = await readCards(popup)
     console.log(`  detected (${names.length}): ${names.join(', ') || '(none)'}`)
@@ -398,14 +415,16 @@ try {
     check('panel still renders on a very large page', names.length > 0, `${elapsed}ms to open`)
     check('finds the framework despite the noise', names.some((n) => n.startsWith('React')))
 
-    const evidence = await evidenceFor(tabId)
+    const evidence = await waitForEvidence(tabId, (e) =>
+      (e.requests ?? []).some((r) => r.startsWith('js.stripe.com')),
+    )
     const requests = evidence?.requests ?? []
     check('request list is capped, not unbounded', requests.length <= 800, `${requests.length}`)
     // Issued after 1,500 calls to one API host. A flat first-come cap drops it.
     check(
       'a late request to a rare host survives the flood',
-      names.some((n) => n.startsWith('Stripe')),
-      requests.some((r) => r.startsWith('js.stripe.com')) ? 'in evidence' : 'missing',
+      requests.some((r) => r.startsWith('js.stripe.com')),
+      `${requests.length} requests kept`,
     )
 
     // Per-host sampling is the point: no single noisy host may crowd out the

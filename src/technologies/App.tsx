@@ -56,7 +56,13 @@ export function TechnologiesApp() {
         <SearchInput value={query} onChange={setQuery} placeholder="Search technologies" />
       }
     >
-      <div className="mb-6 flex flex-wrap gap-1.5">
+      {/*
+        Twenty-seven chips fill four rows before any content, so they are set
+        inside one bordered field rather than floating loose on the page. That
+        reads as a single control someone is choosing within, instead of
+        twenty-seven separate buttons competing with the list below them.
+      */}
+      <div className="mb-6 flex flex-wrap gap-1.5 rounded-card border border-line p-2.5 dark:border-line-dark">
         <button
           type="button"
           onClick={() => setCategory('all')}
@@ -91,7 +97,8 @@ export function TechnologiesApp() {
         </p>
       )}
 
-      <TechList items={filtered} emptyLabel={`Nothing matches “${query.trim()}”.`} />
+      {/* Two columns: this is the whole catalogue being scanned, not read. */}
+      <TechList items={filtered} columns={2} emptyLabel={`Nothing matches “${query.trim()}”.`} />
     </Page>
   )
 }

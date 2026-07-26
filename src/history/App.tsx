@@ -3,7 +3,7 @@ import type { HistoryEntry } from '@/background/history'
 import type { Settings } from '@/background/settings'
 import { sendMessage } from '@/messages'
 import { ToolLogo } from '@/popup/ToolLogo'
-import { Button, EmptyPanel, Page, SearchInput, Toast, useToast } from '@/ui/Page'
+import { Button, EmptyPanel, Page, SearchInput, SiteIcon, Toast, useToast } from '@/ui/Page'
 
 /**
  * Locally stored record of what each site was built with.
@@ -124,7 +124,8 @@ export function HistoryApp() {
               key={entry.hostname}
               className="rounded-card border border-line px-4 py-3 dark:border-line-dark"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
+                <SiteIcon url={entry.url ?? ''} size={20} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] font-medium">
                     {entry.url ? (
@@ -146,13 +147,30 @@ export function HistoryApp() {
                     {relativeTime(entry.at)}
                   </span>
                 </span>
+                {/*
+                  Quiet until wanted. As permanent text it competed with the site
+                  name for attention on every row, which is a lot of emphasis for
+                  the one action nobody comes here to perform.
+                */}
                 <button
                   type="button"
                   onClick={() => void forget(entry.hostname)}
                   aria-label={`Forget ${entry.hostname}`}
-                  className="shrink-0 rounded-btn px-2 py-1 text-[12px] text-muted transition-colors hover:bg-card hover:text-ink dark:text-muted-dark dark:hover:bg-card-dark dark:hover:text-ink-dark"
+                  title={`Forget ${entry.hostname}`}
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-btn text-muted/60 transition-colors hover:bg-card hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 dark:text-muted-dark/60 dark:hover:bg-card-dark dark:hover:text-ink-dark"
                 >
-                  Forget
+                  <svg
+                    viewBox="0 0 14 14"
+                    width="13"
+                    height="13"
+                    aria-hidden="true"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  >
+                    <path d="M3 3.8h8M5.6 3.8V2.6h2.8v1.2M4.2 3.8l.5 7h4.6l.5-7" />
+                  </svg>
                 </button>
               </div>
 
@@ -161,9 +179,9 @@ export function HistoryApp() {
                   <span
                     key={tech.id}
                     title={tech.version ? `${tech.name} ${tech.version}` : tech.name}
-                    className="flex items-center gap-1.5 rounded-btn border border-line px-1.5 py-1 dark:border-line-dark"
+                    className="flex items-center gap-1.5 rounded-btn border border-line py-1 pl-1 pr-2 dark:border-line-dark"
                   >
-                    <ToolLogo icon={tech.icon} name={tech.name} size={14} />
+                    <ToolLogo icon={tech.icon} name={tech.name} size={18} tile />
                     <span className="text-[11px] text-muted dark:text-muted-dark">{tech.name}</span>
                   </span>
                 ))}

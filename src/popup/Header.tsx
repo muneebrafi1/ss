@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { SiteIcon } from '@/ui/Page'
 
 /**
  * Panel header: which site is being described, how much was found, and the
@@ -7,16 +8,7 @@ import { useEffect, useRef, useState } from 'react'
  * The overflow menu closes a real gap — the per-site switch previously lived
  * only in settings, so a user could turn a site back on from the panel but had
  * no way to turn one off from the place they were actually looking at it.
- *
- * The favicon comes from Chrome's own cached favicon service through the
- * extension origin, so it costs no network request and discloses nothing.
  */
-function faviconUrl(pageUrl: string): string {
-  const url = new URL(chrome.runtime.getURL('/_favicon/'))
-  url.searchParams.set('pageUrl', pageUrl)
-  url.searchParams.set('size', '32')
-  return url.toString()
-}
 
 const PAGES = [
   { file: 'report.html', label: 'Full report' },
@@ -36,17 +28,6 @@ function MenuItem({ onClick, children }: { onClick: () => void; children: React.
   )
 }
 
-function GlobeFallback() {
-  return (
-    <span className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[4px] bg-card text-muted dark:bg-card-dark dark:text-muted-dark">
-      <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="1.3">
-        <circle cx="8" cy="8" r="6" />
-        <path d="M2.4 6.2h11.2M2.4 9.8h11.2M8 2a10 10 0 0 1 0 12A10 10 0 0 1 8 2Z" />
-      </svg>
-    </span>
-  )
-}
-
 export function Header({
   hostname,
   url,
@@ -59,7 +40,6 @@ export function Header({
   onDisableSite?: () => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [iconFailed, setIconFailed] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -82,18 +62,7 @@ export function Header({
 
   return (
     <header className="relative flex items-center gap-2.5 border-b border-line px-3.5 py-2.5 dark:border-line-dark">
-      {url && !iconFailed ? (
-        <img
-          src={faviconUrl(url)}
-          alt=""
-          width={18}
-          height={18}
-          className="shrink-0 rounded-[4px]"
-          onError={() => setIconFailed(true)}
-        />
-      ) : (
-        <GlobeFallback />
-      )}
+      <SiteIcon url={url} size={18} />
 
       <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink dark:text-ink-dark">
         {hostname || 'No site'}

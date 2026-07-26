@@ -158,11 +158,43 @@ try {
     const page = await openPage(extensionId, 'options.html')
     const body = await page.textContent('body')
     check('shows both switches', body?.includes('Scan sites automatically') && body?.includes('Remember scanned sites'))
-    check('states the database size', /\d{3} technologies/.test(body ?? ''))
-    check('states the privacy position', body?.includes('values are never read') ?? false)
+    check('states the privacy position', body?.includes('values never are') ?? false)
+    check('links to the full policy', (await page.$('a[href*="privacy-policy"]')) !== null)
 
     const switches = await page.$$('button[role="switch"]')
     check('switches are real controls', switches.length === 2, `${switches.length}`)
+
+    /*
+     * The knob must sit inside its track — in both states.
+     *
+     * Both switches shipped as featureless pills: the knob had no `left`, so it
+     * kept the button's centred static position and the transform pushed a white
+     * circle off the right-hand edge onto a white page. There was no way to tell
+     * on from off. `aria-checked` was correct the entire time, which is exactly
+     * why every existing assertion passed. Only geometry catches this.
+     */
+    for (const state of ['as found', 'after toggling']) {
+      const track = await (await page.$('button[role="switch"]')).boundingBox()
+      const knob = await (await page.$('button[role="switch"] > span')).boundingBox()
+      check(
+        `switch knob is inside its track (${state})`,
+        knob.x >= track.x - 1 &&
+          knob.x + knob.width <= track.x + track.width + 1 &&
+          knob.y >= track.y - 1 &&
+          knob.y + knob.height <= track.y + track.height + 1,
+        `knob ${Math.round(knob.x)}..${Math.round(knob.x + knob.width)} in track ` +
+          `${Math.round(track.x)}..${Math.round(track.x + track.width)}`,
+      )
+      if (state === 'as found') {
+        await page.click('button[role="switch"]')
+        await page.waitForTimeout(400)
+      }
+    }
+    // Leave scanning on for the checks that follow.
+    if ((await page.getAttribute('button[role="switch"]', 'aria-checked')) === 'false') {
+      await page.click('button[role="switch"]')
+      await page.waitForTimeout(400)
+    }
     await switches[1].click()
     await page.waitForTimeout(600)
     check('history switch toggles',
@@ -170,6 +202,12 @@ try {
     await switches[1].click()
     await page.waitForTimeout(600)
     await page.screenshot({ path: resolve(root, 'screenshots/page-settings.png') })
+
+    // Both themes, same state. A white knob on a dark page is the case most
+    // likely to hide the class of bug the light theme just revealed.
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await page.waitForTimeout(350)
+    await page.screenshot({ path: resolve(root, 'screenshots/page-settings-dark.png') })
     await page.close()
   }
 

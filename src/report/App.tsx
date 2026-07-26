@@ -76,36 +76,6 @@ export function ReportApp() {
       current="report"
       title={state?.hostname || 'This site'}
       subtitle={unsupported ? undefined : summary ? `${summary} · ${countLabel}` : countLabel}
-      actions={
-        detections.length > 0 ? (
-          <>
-            <Button
-              onClick={() =>
-                void copyToClipboard(
-                  formatExport('markdown', state?.hostname ?? '', detections),
-                ).then((ok) => flash(ok ? 'Copied as Markdown' : 'Copy failed'))
-              }
-            >
-              Copy
-            </Button>
-            <Button onClick={() => exportAs('markdown')}>Markdown</Button>
-            <Button onClick={() => exportAs('json')}>JSON</Button>
-            <Button
-              variant="primary"
-              onClick={() =>
-                void downloadShareCard({
-                  hostname: state?.hostname ?? '',
-                  url: state?.url,
-                  detections,
-                  format,
-                })
-              }
-            >
-              Download image
-            </Button>
-          </>
-        ) : undefined
-      }
     >
       {!state ? (
         <p className="py-10 text-center text-[13px] text-muted dark:text-muted-dark">Loading…</p>
@@ -125,43 +95,93 @@ export function ReportApp() {
         />
       ) : (
         <>
-          <figure className="mb-8">
-            <div className="mb-3 flex items-center gap-1">
-              {FORMATS.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  title={option.hint}
-                  onClick={() => setFormat(option.id)}
-                  className={`rounded-btn px-2.5 py-1 text-[12px] font-medium transition-colors ${
-                    format === option.id
-                      ? 'bg-card text-ink dark:bg-card-dark dark:text-ink-dark'
-                      : 'text-muted hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark'
+          {/*
+            The card and the things you do with it, side by side. The exports
+            used to sit in the page header, the full width of the page away from
+            the image they act on, while the preview left a 430px void beside it.
+          */}
+          <section className="mb-9 grid gap-6 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+            <figure className="m-0">
+              {preview ? (
+                <img
+                  src={preview}
+                  alt={`Stack card for ${state.hostname}`}
+                  className="w-full rounded-card border border-line dark:border-line-dark"
+                />
+              ) : (
+                <div
+                  className={`w-full rounded-card border border-line bg-card dark:border-line-dark dark:bg-card-dark ${
+                    format === 'square' ? 'aspect-square' : 'aspect-[1200/630]'
                   }`}
+                />
+              )}
+              <figcaption className="mt-2 text-[12px] text-muted dark:text-muted-dark">
+                The same image the panel copies.
+              </figcaption>
+            </figure>
+
+            <div>
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted dark:text-muted-dark">
+                Share
+              </h2>
+
+              {/* A real segmented control, rather than two bare words. */}
+              <div className="mt-2 inline-flex rounded-btn border border-line p-0.5 dark:border-line-dark">
+                {FORMATS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    title={option.hint}
+                    aria-pressed={format === option.id}
+                    onClick={() => setFormat(option.id)}
+                    className={`rounded-[5px] px-3 py-1 text-[12px] font-medium transition-colors ${
+                      format === option.id
+                        ? 'bg-ink text-bg dark:bg-ink-dark dark:text-bg-dark'
+                        : 'text-muted hover:text-ink dark:text-muted-dark dark:hover:text-ink-dark'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[12px] text-muted dark:text-muted-dark">
+                {FORMATS.find((option) => option.id === format)?.hint}
+              </p>
+
+              <div className="mt-3">
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    void downloadShareCard({
+                      hostname: state.hostname,
+                      url: state.url,
+                      detections,
+                      format,
+                    })
+                  }
                 >
-                  {option.label}
-                </button>
-              ))}
+                  Download image
+                </Button>
+              </div>
+
+              <h2 className="mt-7 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted dark:text-muted-dark">
+                Export
+              </h2>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  onClick={() =>
+                    void copyToClipboard(formatExport('markdown', state.hostname, detections)).then(
+                      (ok) => flash(ok ? 'Copied as Markdown' : 'Copy failed'),
+                    )
+                  }
+                >
+                  Copy
+                </Button>
+                <Button onClick={() => exportAs('markdown')}>Markdown</Button>
+                <Button onClick={() => exportAs('json')}>JSON</Button>
+              </div>
             </div>
-            {preview ? (
-              <img
-                src={preview}
-                alt={`Stack card for ${state.hostname}`}
-                className={`rounded-card border border-line dark:border-line-dark ${
-                  format === 'square' ? 'w-full max-w-[420px]' : 'w-full'
-                }`}
-              />
-            ) : (
-              <div
-                className={`rounded-card border border-line bg-card dark:border-line-dark dark:bg-card-dark ${
-                  format === 'square' ? 'aspect-square w-full max-w-[420px]' : 'aspect-[1200/630]'
-                }`}
-              />
-            )}
-            <figcaption className="mt-2 text-[12px] text-muted dark:text-muted-dark">
-              Shareable card — the same image the panel copies.
-            </figcaption>
-          </figure>
+          </section>
 
           <TechList
             items={detections.map((detection) => ({

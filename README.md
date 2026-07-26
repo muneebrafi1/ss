@@ -211,7 +211,10 @@ a bare HTML page, a page that refuses script downloads, and a deliberate stress
 page — plus the per-site off switch and an unsupported page. `functions.mjs` exercises every user-facing action — both share-card
 formats are downloaded, measured, and checked for drawn content in the footer
 band as well as overall, and each export is opened and read. `pages.mjs` clicks
-through the report, history, technologies and settings pages. 154 browser checks
+through the report, history, technologies and settings pages — including a
+geometric check that the settings toggle's knob sits inside its track in both
+states, which is the only kind of assertion that would have caught the knob
+shipping outside its own control. 156 browser checks
 in all, including the privacy guarantee that no cookie value is ever stored.
 
 Three of those checks exist to prove the widened collection is real rather than

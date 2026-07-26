@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import type { Settings } from '@/background/settings'
-import { DATABASE_FINGERPRINTS, CATEGORIES } from '@/fingerprints'
 import { sendMessage } from '@/messages'
 import { Button, Page, Toast, useToast } from '@/ui/Page'
 
@@ -40,12 +39,21 @@ function Switch({
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative h-[22px] w-[38px] rounded-full transition-colors ${
+      className={`relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 dark:focus-visible:ring-accent-dark/40 ${
         checked ? 'bg-accent dark:bg-accent-dark' : 'bg-line dark:bg-line-dark'
       }`}
     >
+      {/*
+        `left-0` is load-bearing. Without it the knob keeps its static position,
+        and because a button centres its content that position is the middle of
+        the track — so `translate-x-[19px]` pushed a white circle clean off the
+        right-hand edge onto a white page. Both switches rendered as featureless
+        pills and there was no way to tell on from off. `aria-checked` was
+        correct throughout, which is exactly why nothing caught it; the
+        end-to-end suite now checks the knob's box against the track's.
+      */}
       <span
-        className={`absolute top-[3px] h-4 w-4 rounded-full bg-white transition-transform ${
+        className={`absolute left-0 top-[3px] h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
           checked ? 'translate-x-[19px]' : 'translate-x-[3px]'
         }`}
       />
@@ -85,11 +93,9 @@ export function OptionsApp() {
   }
 
   return (
-    <Page
-      current="options"
-      title="Settings"
-      subtitle={`${DATABASE_FINGERPRINTS.length} technologies across ${CATEGORIES.length} categories`}
-    >
+    // No subtitle: the database size is a fact about the Technologies page, and
+    // that page already states it.
+    <Page current="options" title="Settings">
       <section className="rounded-card border border-line px-4 dark:border-line-dark">
         <Row
           title="Scan sites automatically"
@@ -113,37 +119,53 @@ export function OptionsApp() {
         </Row>
       </section>
 
-      <section className="mt-8">
-        <h2 className="mb-2 text-[14px] font-medium">Sites turned off</h2>
+      {/* In a card like the switches above it, so the page reads as one thing. */}
+      <section className="mt-6 rounded-card border border-line px-4 py-4 dark:border-line-dark">
+        <h2 className="text-[14px] font-medium">Sites turned off</h2>
         {settings?.disabledHosts.length ? (
-          <ul className="divide-y divide-line rounded-card border border-line dark:divide-line-dark dark:border-line-dark">
+          <ul className="mt-3 divide-y divide-line dark:divide-line-dark">
             {settings.disabledHosts.map((hostname) => (
-              <li key={hostname} className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-[13px]">{hostname}</span>
+              <li key={hostname} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+                <span className="truncate text-[13px]">{hostname}</span>
                 <Button onClick={() => void reenable(hostname)}>Turn back on</Button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-[13px] text-muted dark:text-muted-dark">
+          <p className="mt-1 text-[13px] text-muted dark:text-muted-dark">
             None. You can turn StackLens off for a site from the panel&apos;s menu.
           </p>
         )}
       </section>
 
-      <section className="mt-10 border-t border-line pt-6 dark:border-line-dark">
+      {/*
+        Three lines, not three paragraphs. This was the longest block of prose in
+        the product, and a privacy statement nobody finishes reading protects
+        nobody — the specifics that matter are the ones a reader can take in at a
+        glance. The full policy is one click away for anyone who wants it.
+      */}
+      <section className="mt-6 rounded-card border border-line px-4 py-4 dark:border-line-dark">
         <h2 className="text-[14px] font-medium">Your data</h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-muted dark:text-muted-dark">
-          Everything StackLens reads stays on this device. There is no account, no analytics, and
-          no server — nothing about the sites you visit is ever transmitted anywhere. Detection
-          results are held only for the current browsing session; scan history, when enabled, is
-          stored locally and can be cleared at any time from the History page.
-        </p>
-        <p className="mt-3 text-[13px] leading-relaxed text-muted dark:text-muted-dark">
-          Cookie and storage <strong className="font-medium text-ink dark:text-ink-dark">names</strong> are
-          read to identify services. Their{' '}
-          <strong className="font-medium text-ink dark:text-ink-dark">values are never read</strong>.
-        </p>
+        <ul className="mt-3 space-y-1.5 text-[13px] leading-relaxed text-muted dark:text-muted-dark">
+          {[
+            'Nothing leaves this device. No account, no server, no analytics.',
+            'Detections last only for the browsing session. History, when on, is local and clearable.',
+            'Cookie and storage names are read to identify services — their values never are.',
+          ].map((line) => (
+            <li key={line} className="flex gap-2">
+              <span aria-hidden="true" className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-muted/50 dark:bg-muted-dark/50" />
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+        <a
+          href="https://github.com/muneebrafi1/ss/blob/main/store/privacy-policy.md"
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 inline-block text-[13px] text-accent no-underline hover:underline dark:text-accent-dark"
+        >
+          Full privacy policy
+        </a>
       </section>
 
       <Toast message={toast} />

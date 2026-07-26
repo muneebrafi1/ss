@@ -65,19 +65,54 @@ function initials(name: string): string {
   return (words[0]?.[0] ?? '?').toUpperCase()
 }
 
-export function ToolLogo({ icon, name, size = 28 }: { icon: string; name: string; size?: number }) {
+/**
+ * Wraps a mark in a recessed square.
+ *
+ * The database holds 532 brand marks from five sources, and their aspect ratios
+ * and visual weights are wildly uneven — a wordmark renders as a thin sliver
+ * beside a letterform that fills its whole box. In a list that reads as broken
+ * layout rather than as different brands. The share card solved this by drawing
+ * every logo into a tile (`drawTile` in `src/lib/share-image.ts`); this is the
+ * same treatment in the DOM, so the pages and the exported image agree.
+ */
+function Tile({ size, children }: { size: number; children: React.ReactNode }) {
+  return (
+    <span
+      className="grid shrink-0 place-items-center border border-line bg-card dark:border-line-dark dark:bg-card-dark"
+      style={{ width: size, height: size, borderRadius: Math.round(size * 0.28) }}
+    >
+      {children}
+    </span>
+  )
+}
+
+export function ToolLogo({
+  icon,
+  name,
+  size = 28,
+  tile = false,
+}: {
+  icon: string
+  name: string
+  size?: number
+  /** Renders the mark inside a recessed square, for lists of many brands. */
+  tile?: boolean
+}) {
   const entry = iconEntry(icon)
+  // Inside a tile the mark is drawn smaller so the square, not the artwork,
+  // sets the rhythm of the row.
+  const markSize = tile ? Math.round(size * 0.62) : size
 
   if (entry?.body) {
     // Monochrome silhouettes may be recoloured for contrast; full-colour brand
     // artwork is left exactly as the brand draws it.
     const recolour = entry.mono && isNearMonochrome(entry.hex)
     const lift = entry.mono && !recolour && needsDarkLift(entry.hex)
-    return (
+    const mark = (
       <svg
         viewBox={entry.vb ?? '0 0 24 24'}
-        width={size}
-        height={size}
+        width={markSize}
+        height={markSize}
         role="img"
         aria-label={name}
         className={
@@ -93,16 +128,20 @@ export function ToolLogo({ icon, name, size = 28 }: { icon: string; name: string
         dangerouslySetInnerHTML={{ __html: entry.body }}
       />
     )
+    return tile ? <Tile size={size}>{mark}</Tile> : mark
   }
 
+  // A monogram already fills its own tinted square, so it never gets a second
+  // one — nesting the two would read as a box inside a box.
   return (
     <span
       role="img"
       aria-label={name}
-      className="sl-monogram grid shrink-0 place-items-center rounded-[8px] font-semibold"
+      className="sl-monogram grid shrink-0 place-items-center font-semibold"
       style={{
         width: size,
         height: size,
+        borderRadius: Math.round(size * (tile ? 0.28 : 0.29)),
         fontSize: Math.round(size * 0.42),
         ['--sl-brand' as string]: entry?.hex ?? '#6B6B76',
       }}

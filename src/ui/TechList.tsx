@@ -8,6 +8,12 @@ import { ToolLogo } from '@/popup/ToolLogo'
  * Unlike the panel's card grid, descriptions are visible here. The panel hides
  * them to stay visual in a 400px box; a page has the room, and reading is what
  * a page is for.
+ *
+ * The column count is a prop because the two callers are doing different jobs.
+ * The report shows one site's stack — a dozen or so rows, read top to bottom, so
+ * one column is right. The technologies page is the whole 532-entry catalogue
+ * being scanned for a name, and a single column there spends 850px on a logo, a
+ * name and a two-word description while doubling the scrolling.
  */
 
 export interface TechItem {
@@ -20,7 +26,15 @@ export interface TechItem {
   url?: string
 }
 
-export function TechList({ items, emptyLabel }: { items: TechItem[]; emptyLabel?: string }) {
+export function TechList({
+  items,
+  emptyLabel,
+  columns = 1,
+}: {
+  items: TechItem[]
+  emptyLabel?: string
+  columns?: 1 | 2
+}) {
   const byCategory = new Map<string, TechItem[]>()
   for (const item of items) {
     const list = byCategory.get(item.category) ?? []
@@ -54,51 +68,56 @@ export function TechList({ items, emptyLabel }: { items: TechItem[]; emptyLabel?
             </span>
           </div>
 
-          <ul className="divide-y divide-line overflow-hidden rounded-card border border-line dark:divide-line-dark dark:border-line-dark">
+          <ul className={`grid gap-2 ${columns === 2 ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
             {group.items.map((item) => {
               const Row = item.url ? 'a' : 'div'
+              const version = displayVersion(item.version ?? null)
               return (
                 <li key={item.id}>
                   <Row
-                    {...(item.url
-                      ? { href: item.url, target: '_blank', rel: 'noreferrer' }
-                      : {})}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 no-underline transition-colors ${
+                    {...(item.url ? { href: item.url, target: '_blank', rel: 'noreferrer' } : {})}
+                    className={`flex h-full items-center gap-3 rounded-card border border-line px-3 py-2.5 no-underline transition-colors dark:border-line-dark ${
                       item.url ? 'hover:bg-card dark:hover:bg-card-dark' : ''
                     }`}
                   >
-                    <ToolLogo icon={item.icon} name={item.name} size={24} />
+                    <ToolLogo icon={item.icon} name={item.name} size={30} tile />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13px] font-medium text-ink dark:text-ink-dark">
-                        {item.name}
-                        {displayVersion(item.version ?? null) && (
-                          <span className="font-normal text-muted dark:text-muted-dark">
-                            {' '}
-                            {displayVersion(item.version ?? null)}
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate text-[13px] font-medium text-ink dark:text-ink-dark">
+                          {item.name}
+                        </span>
+                        {version && (
+                          <span className="shrink-0 text-[12px] font-normal text-muted dark:text-muted-dark">
+                            {version}
                           </span>
+                        )}
+                        {/*
+                          Next to the name rather than pinned to the far edge.
+                          Across an 850px row the arrow was marooned so far from
+                          the text that it read as belonging to nothing.
+                        */}
+                        {item.url && (
+                          <svg
+                            viewBox="0 0 14 14"
+                            width="11"
+                            height="11"
+                            aria-hidden="true"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            className="shrink-0 text-muted/70 dark:text-muted-dark/70"
+                          >
+                            <path d="M5 2.5h6.5V9M11.5 2.5 4 10" />
+                          </svg>
                         )}
                       </span>
                       {item.description && (
-                        <span className="block truncate text-[12px] text-muted dark:text-muted-dark">
+                        <span className="mt-0.5 block truncate text-[12px] text-muted dark:text-muted-dark">
                           {item.description}
                         </span>
                       )}
                     </span>
-                    {item.url && (
-                      <svg
-                        viewBox="0 0 14 14"
-                        width="12"
-                        height="12"
-                        aria-hidden="true"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.4"
-                        strokeLinecap="round"
-                        className="shrink-0 text-muted dark:text-muted-dark"
-                      >
-                        <path d="M5 2.5h6.5V9M11.5 2.5 4 10" />
-                      </svg>
-                    )}
                   </Row>
                 </li>
               )

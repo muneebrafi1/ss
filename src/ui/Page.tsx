@@ -37,6 +37,59 @@ function Logo() {
   )
 }
 
+/**
+ * A site's own favicon, from Chrome's local favicon store.
+ *
+ * Served from the browser's cache through the extension's own origin, so it
+ * costs no network request and tells no third party which sites are being
+ * looked at. Lifted here from the panel header because the history list needs
+ * exactly the same thing, and a site's icon is the fastest way to recognise it
+ * in a list of them.
+ */
+export function faviconUrl(pageUrl: string, size = 32): string {
+  const url = new URL(chrome.runtime.getURL('/_favicon/'))
+  url.searchParams.set('pageUrl', pageUrl)
+  url.searchParams.set('size', String(size))
+  return url.toString()
+}
+
+export function SiteIcon({ url, size = 18 }: { url: string; size?: number }) {
+  const [failed, setFailed] = useState(false)
+
+  if (!url || failed) {
+    return (
+      <span
+        className="grid shrink-0 place-items-center rounded-[4px] bg-card text-muted dark:bg-card-dark dark:text-muted-dark"
+        style={{ width: size, height: size }}
+      >
+        <svg
+          viewBox="0 0 16 16"
+          width={Math.round(size * 0.6)}
+          height={Math.round(size * 0.6)}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          aria-hidden="true"
+        >
+          <circle cx="8" cy="8" r="6" />
+          <path d="M2.4 6.2h11.2M2.4 9.8h11.2M8 2a10 10 0 0 1 0 12A10 10 0 0 1 8 2Z" />
+        </svg>
+      </span>
+    )
+  }
+
+  return (
+    <img
+      src={faviconUrl(url, size * 2)}
+      alt=""
+      width={size}
+      height={size}
+      className="shrink-0 rounded-[4px]"
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
 export function Page({
   current,
   title,
