@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "StackLens",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "See what any website is built with \u2014 AI tools, hosting, database, auth, payments, and more.",
   "minimum_chrome_version": "116",
   "background": {

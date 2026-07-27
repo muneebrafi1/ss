@@ -43,6 +43,7 @@ export default defineConfig({
         report: resolve(root, 'report.html'),
         history: resolve(root, 'history.html'),
         technologies: resolve(root, 'technologies.html'),
+        privacy: resolve(root, 'privacy.html'),
         background: resolve(root, 'src/background/index.ts'),
       },
       output: {

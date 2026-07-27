@@ -222,6 +222,18 @@
    * continuing rather than as a hard edge.
    */
   .sl-scroll {
+    /*
+     * Prefixed as well as standard. Unprefixed `mask-image` shipped in Chrome
+     * 120, and `minimum_chrome_version` is 116 — so on four releases inside the
+     * supported range the fade silently did not apply.
+     */
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 14px,
+      #000 calc(100% - 14px),
+      transparent 100%
+    );
     mask-image: linear-gradient(
       to bottom,
       transparent 0,

@@ -216,7 +216,7 @@ band as well as overall, and each export is opened and read. `pages.mjs` clicks
 through the report, history, technologies and settings pages — including a
 geometric check that the settings toggle's knob sits inside its track in both
 states, which is the only kind of assertion that would have caught the knob
-shipping outside its own control. 188 browser checks
+shipping outside its own control. 192 browser checks
 in all, including the privacy guarantee that no cookie value is ever stored.
 
 Three of those checks exist to prove the widened collection is real rather than
@@ -280,6 +280,31 @@ Chrome is launched with `--host-resolver-rules` mapping every hostname to the
 fixture server, so the page genuinely requests `api.openai.com` and the
 extension observes the real hostname — the request patterns are anchored to
 hostnames and would correctly refuse to match a rewritten path.
+
+## Shipping it
+
+```bash
+npm run verify     # 82 unit tests + 192 browser checks
+npm run package    # → release/stacklens-<version>.zip
+```
+
+`npm run package` refuses to build the archive if the version is malformed or
+out of step with `package.json`, an icon is missing, a source map or `.ts` file
+reached `dist/`, a declared permission is unused *or unrecognised*, the
+in-extension privacy page is absent, or the bundle contains `eval`,
+`new Function` or `importScripts`. Those are the mechanical rejection causes,
+checked before a reviewer sees them.
+
+The unrecognised-permission rule was added after the first version of the check
+failed to catch a bogus `bookmarks` permission added to a built manifest: it
+only tested permissions it already knew, so the likeliest mistake — adding one
+and never using it — slid straight through.
+
+`store/SUBMISSION.md` walks every dashboard field, including the privacy-practice
+answers that cause most rejections. The policy is compiled from
+`store/privacy-policy.md` into three places by `scripts/make-privacy.mjs` — an
+in-extension page, a hostable page for the store's required public URL, and the
+document itself — so they cannot drift.
 
 ## Privacy
 

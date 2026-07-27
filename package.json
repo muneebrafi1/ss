@@ -1,11 +1,11 @@
 {
   "name": "stacklens",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Chrome extension that identifies the technologies a website is built with.",
   "type": "module",
   "scripts": {
-    "build": "npm run icons:map && tsc --noEmit && vite build",
+    "build": "npm run icons:map && npm run privacy && tsc --noEmit && vite build",
     "icons": "node scripts/make-icons.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -15,7 +15,9 @@
     "verify": "npm run test && npm run test:e2e",
     "dev": "vite build --watch",
     "icons:gallery": "node scripts/icon-gallery.mjs && node tests/e2e/icons.mjs",
-    "store:shots": "node scripts/make-store-shots.mjs"
+    "store:shots": "node scripts/make-store-shots.mjs",
+    "privacy": "node scripts/make-privacy.mjs",
+    "package": "npm run build && node scripts/package.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

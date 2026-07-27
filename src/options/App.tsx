@@ -189,10 +189,13 @@ export function OptionsApp() {
             </li>
           ))}
         </ul>
+        {/*
+          An in-extension page, not a link off to a repository. This pointed at
+          a file in a private GitHub repo — a 404 for every user who clicked it,
+          on the one page where trust is the entire point.
+        */}
         <a
-          href="https://github.com/muneebrafi1/ss/blob/main/store/privacy-policy.md"
-          target="_blank"
-          rel="noreferrer"
+          href="privacy.html"
           className="mt-3 inline-block text-base text-accent no-underline hover:underline dark:text-accent-dark"
         >
           Full privacy policy

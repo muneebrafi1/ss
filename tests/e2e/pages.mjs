@@ -159,7 +159,7 @@ try {
     const body = await page.textContent('body')
     check('shows both switches', body?.includes('Scan sites automatically') && body?.includes('Remember scanned sites'))
     check('states the privacy position', body?.includes('values never are') ?? false)
-    check('links to the full policy', (await page.$('a[href*="privacy-policy"]')) !== null)
+    check('links to the full policy', (await page.$('a[href="privacy.html"]')) !== null)
 
     const switches = await page.$$('button[role="switch"]')
     check('switches are real controls', switches.length === 2, `${switches.length}`)
@@ -239,6 +239,31 @@ try {
     })
     check('background covers the viewport, not just the column', covers)
     await page.emulateMedia({ colorScheme: 'light' })
+    await page.close()
+  }
+
+  console.log('\n=== Privacy policy ships inside the extension ===')
+  {
+    /*
+     * The settings link used to point at a file in a private GitHub repository —
+     * a 404 for every user who clicked it, on the one page where trust is the
+     * whole point. The policy is compiled into the extension now, from the same
+     * markdown submitted to the store.
+     */
+    const settings = await openPage(extensionId, 'options.html')
+    const href = await settings.getAttribute('a[href*="privacy"]', 'href')
+    check('settings links to a page inside the extension', href === 'privacy.html', String(href))
+    await settings.close()
+
+    const page = await openPage(extensionId, 'privacy.html')
+    const body = await page.textContent('body')
+    check('the policy page renders', (body?.length ?? 0) > 1500, `${body?.length ?? 0} chars`)
+    check('states the core promise', body?.includes('does not collect') ?? false)
+    check(
+      'covers the one feature that uses the network',
+      body?.includes('Deep scan') ?? false,
+    )
+    await page.screenshot({ path: resolve(root, 'screenshots/page-privacy.png') })
     await page.close()
   }
 
