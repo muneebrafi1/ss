@@ -281,10 +281,58 @@ fixture server, so the page genuinely requests `api.openai.com` and the
 extension observes the real hostname — the request patterns are anchored to
 hostnames and would correctly refuse to match a rewritten path.
 
+### What it costs a page, measured
+
+`npm run perf` answers the question the architecture only argued. Two Chrome
+contexts launch from identical flags, differing solely in whether `dist/` is
+loaded, and the same page alternates between them load by load. Taking the
+difference *within* each pair cancels machine drift, and the spread of those
+differences becomes the noise floor.
+
+That design came out of getting it wrong first. The original version ran all the
+extension-off loads and then all the extension-on loads, which measures the
+extension plus everything else that changed in between — the same page read
+−0.7ms on one run and +7.0ms on the next, and the table dutifully printed
+"+19.6%". A regression does not appear and vanish in ninety seconds; drift does.
+
+| Page | Without | With | Difference |
+|---|---|---|---|
+| Plain HTML | ~15ms | ~15ms | below noise (±4ms) |
+| Modern SaaS | ~37ms | ~41ms | below noise (±10ms) |
+| Publisher + ad tech | ~30ms | ~34ms | below noise (±9ms) |
+| Stress: 1,500 requests | ~1.8s | ~2.0s | **+150–260ms (~8–14%)** |
+
+Three of four pages land inside the noise, so the honest report is "not
+measurable" rather than a percentage — the same reason the panel shows no
+confidence score.
+
+The stress row is a range rather than a figure, and deliberately. Across five
+runs the difference was positive every time (+156, +159, +162, +224, +263ms),
+which noise does not do — but that page's own variance is large enough that a
+single run's delta can fall inside its own noise band, and the harness will
+honestly print "below noise" when it does. The consistent sign is the evidence;
+one run's percentage is not. Quoting "+9.2%" from the run that happened to
+resolve it would be the same false precision the panel refuses when it declines
+to show "91% confident".
+
+Main-thread blocking matters more than load time, because a page can stutter
+while its load event stays flat. Sampling frame gaps at 60Hz, the paired
+difference on every ordinary page is **0.0ms with 0.0ms of noise**. Observation
+runs in the service worker, on its own thread, and the page never feels it.
+Opening the panel is the one moment code runs *in* the page; on the stress
+fixture it renders detections in 235ms without costing a single dropped frame.
+
+The frame-gap check needed the same correction as the load check. A fixed 50ms
+threshold failed at exactly +50.0ms on the stress page — which already blocks
+itself for ~120ms decoding 400 images, and swings by several frames run to run.
+A threshold smaller than a metric's own noise is not a test, it is a coin flip
+that files bug reports.
+
 ## Shipping it
 
 ```bash
 npm run verify     # 82 unit tests + 192 browser checks
+npm run perf       # 13 paired performance checks
 npm run package    # → release/stacklens-<version>.zip
 ```
 

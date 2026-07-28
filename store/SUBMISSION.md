@@ -110,11 +110,61 @@ Then `npm run package` again and ship 1.0.1.
   process that wrote the detector, so they cannot surprise it the way a live
   site would. Load `dist/` unpacked at `chrome://extensions` and visit a dozen
   sites whose stack you already know before submitting.
-- **No performance measurement.** Nothing has measured what the extension costs
-  a page load. Collection is observe-only and matching happens on panel open
-  rather than per request, so the design is right, but that is an argument
-  rather than a number.
+- **The stress-page cost is real.** See the numbers below: on ordinary pages the
+  cost is not measurable, but a page issuing 1,500 requests pays a consistent
+  ~9%. That is the shape you would expect from per-request observation, and it
+  is the number to watch if the evidence caps are ever raised.
 - **The 150 fingerprints added in one batch** have had far less scrutiny than
   the original 383. The two-signal rule and the fixture suite cover the
   structural risks; individual patterns have not each been checked against a
   real site.
+
+---
+
+## 7. What it costs a page
+
+`npm run perf` launches two Chrome contexts from identical flags, differing only
+in whether `dist/` is loaded, and alternates the same page between them load by
+load. Taking the difference within each pair cancels machine drift; the spread of
+those differences is the noise floor. Nine measured loads per page per context,
+two more discarded as warmup.
+
+| Page | Load without | Load with | Difference |
+|---|---|---|---|
+| Plain HTML | ~15ms | ~15ms | below noise (±4ms) |
+| Modern SaaS | ~37ms | ~41ms | below noise (±10ms) |
+| Publisher + ad tech | ~30ms | ~34ms | below noise (±9ms) |
+| Stress: 1,500 requests | ~1.8s | ~2.0s | **+150–260ms (~8–14%)** |
+
+**On ordinary pages the cost is below what the measurement can resolve.** Three
+of the four pages produce a difference smaller than the run-to-run spread, which
+means the honest answer is "not measurable" — not "zero", and certainly not a
+percentage.
+
+The stress fixture is the exception, and it needs stating carefully. Across five
+runs the difference came out **positive every time** (+156, +159, +162, +224,
++263ms), which random noise does not do. But that page's own variance is large
+enough that on any single run the delta may land inside its own noise band, so
+the harness will sometimes print "below noise" for it. The consistent sign across
+runs is the evidence that the cost is real; no single run's percentage is worth
+quoting as a figure. Roughly: 1,500 requests through the webRequest listener cost
+on the order of a tenth of a second.
+
+**Main-thread blocking is the number that matters more**, because load time can
+stay flat while a page stutters. Sampling frame gaps at 60Hz, the paired
+difference on every ordinary page is **exactly 0.0ms with 0.0ms of noise** —
+observation happens in the service worker, on its own thread, and the page never
+feels it. Opening the panel is the one moment StackLens runs code inside the
+page, and on the stress fixture that costs 235ms to render detections while never
+blocking the page for even one dropped frame.
+
+Session storage holds **0.7–2.4 KB per ordinary tab** (366 KB for the stress
+page, where every evidence cap is saturated at once). Thirty ordinary tabs
+project to 0.07 MB against a ~10 MB budget.
+
+Two caveats, since a number invites more trust than a paragraph. The fixture
+server is on loopback, so network time is near zero and CPU cost is the entire
+signal — real pages are dominated by network, so these percentages are upper
+bounds. And this is headless Chrome on one machine; the absolute milliseconds
+will differ elsewhere, which is why the checks assert against a noise floor
+computed in the same run rather than against numbers baked into the file.
