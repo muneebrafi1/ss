@@ -1,0 +1,325 @@
+import type { Fingerprint } from '@/types'
+
+/**
+ * Backend languages and frameworks.
+ *
+ * Inferred rather than observed. A backend runs entirely on the server, so
+ * detection leans on the traces it leaves in responses — a session cookie
+ * naming convention, a CSRF field, a `Server` or `X-Powered-By` header it
+ * forgot to strip. Security-conscious deployments remove exactly these, so a
+ * missing backend here means "hidden", not "absent".
+ */
+export const BACKEND: Fingerprint[] = [
+  {
+    id: 'express',
+    name: 'Express',
+    category: 'backend',
+    description: 'Node.js web framework',
+    icon: 'express',
+    website: 'https://expressjs.com',
+    implies: ['nodejs'],
+    signals: [{ type: 'header', name: 'x-powered-by', pattern: /^Express$/i, weight: 0.9 }],
+  },
+  {
+    id: 'nodejs',
+    name: 'Node.js',
+    category: 'backend',
+    description: 'JavaScript runtime on the server',
+    icon: 'nodedotjs',
+    website: 'https://nodejs.org',
+    signals: [
+      { type: 'header', name: 'x-powered-by', pattern: /Express|Nest|Koa|Next\.js/i, weight: 0.7 },
+      { type: 'cookie', pattern: /^connect\.sid$/, weight: 0.85 },
+    ],
+  },
+  {
+    id: 'php',
+    name: 'PHP',
+    category: 'backend',
+    description: 'Server-side scripting language',
+    icon: 'php',
+    website: 'https://php.net',
+    signals: [
+      { type: 'header', name: 'x-powered-by', pattern: /PHP/i, weight: 0.95 },
+      { type: 'cookie', pattern: /^PHPSESSID$/, weight: 0.9 },
+    ],
+    version: [{ from: 'header', name: 'x-powered-by', pattern: /PHP\/([\d.]+)/ }],
+  },
+  {
+    id: 'laravel',
+    name: 'Laravel',
+    category: 'backend',
+    description: 'PHP web framework',
+    icon: 'laravel',
+    website: 'https://laravel.com',
+    implies: ['php'],
+    signals: [
+      { type: 'cookie', pattern: /^laravel_session$/, weight: 0.95 },
+      { type: 'cookie', pattern: /^XSRF-TOKEN$/, weight: 0.5 },
+      // `livewire` as a bare word matched the product being named in prose or a
+      // comment. The wire: directives and the bundle filename are what a page
+      // actually running Livewire emits, and they raise recall besides.
+      {
+        type: 'html',
+        pattern: /laravel_session|wire:(?:model|click|submit|poll|loading)|livewire\.js/,
+        weight: 0.6,
+      },
+    ],
+  },
+  {
+    id: 'django',
+    name: 'Django',
+    category: 'backend',
+    description: 'Python web framework',
+    icon: 'django',
+    website: 'https://djangoproject.com',
+    implies: ['python'],
+    signals: [
+      { type: 'cookie', pattern: /^csrftoken$/, weight: 0.8 },
+      { type: 'cookie', pattern: /^django_language$/, weight: 0.85 },
+      { type: 'html', pattern: /csrfmiddlewaretoken/, weight: 0.85 },
+    ],
+  },
+  {
+    id: 'python',
+    name: 'Python',
+    category: 'backend',
+    description: 'Server-side programming language',
+    icon: 'python',
+    website: 'https://python.org',
+    signals: [
+      { type: 'header', name: 'server', pattern: /uvicorn|gunicorn|Werkzeug|WSGIServer/i, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'fastapi',
+    name: 'FastAPI',
+    category: 'backend',
+    description: 'Modern Python API framework',
+    icon: 'fastapi',
+    website: 'https://fastapi.tiangolo.com',
+    implies: ['python'],
+    signals: [
+      // Both of these are FastAPI-adjacent rather than FastAPI-specific:
+      // uvicorn serves Starlette, Litestar, Django-ASGI and anything else ASGI
+      // (python's own entry claims it at 0.9, which is the correct home), and
+      // /openapi.json is a first-party path any OpenAPI generator can serve.
+      // Either one alone used to clear the threshold; now they must corroborate.
+      //
+      // `/docs` is gone rather than merely reduced. It is a documentation path
+      // on an enormous share of the web and carries almost no information about
+      // the backend — and because noisy-OR assumes signals are INDEPENDENT,
+      // three correlated path shapes at 0.4 combined to 0.78 and detected
+      // FastAPI on a page that served nothing but ordinary paths. Weak evidence
+      // stacked is not strong evidence when the weakness has a common cause.
+      //
+      // What is left needs an ASGI server AND an OpenAPI document — two
+      // different evidence types, which is what noisy-OR is actually for. That
+      // still cannot separate FastAPI from Starlette or Litestar, and it is not
+      // meant to: this database would rather miss a framework than invent one.
+      { type: 'header', name: 'server', pattern: /uvicorn/i, weight: 0.4 },
+      { type: 'request', pattern: /\/openapi\.json(?:$|\?)/, weight: 0.4 },
+    ],
+  },
+  {
+    id: 'flask',
+    name: 'Flask',
+    category: 'backend',
+    description: 'Lightweight Python web framework',
+    icon: 'flask',
+    website: 'https://flask.palletsprojects.com',
+    implies: ['python'],
+    signals: [{ type: 'header', name: 'server', pattern: /Werkzeug/i, weight: 0.9 }],
+  },
+  {
+    id: 'rails',
+    name: 'Ruby on Rails',
+    category: 'backend',
+    description: 'Ruby web framework',
+    icon: 'rubyonrails',
+    website: 'https://rubyonrails.org',
+    signals: [
+      { type: 'meta', name: 'csrf-param', pattern: /authenticity_token/, weight: 0.9 },
+      { type: 'html', pattern: /authenticity_token|data-turbo|turbolinks/, weight: 0.7 },
+      { type: 'cookie', pattern: /^_[\w]+_session$/, weight: 0.6 },
+      { type: 'header', name: 'x-runtime', weight: 0.6 },
+    ],
+  },
+  {
+    id: 'aspnet',
+    name: 'ASP.NET',
+    category: 'backend',
+    description: 'Microsoft web framework',
+    icon: 'dotnet',
+    website: 'https://dotnet.microsoft.com/apps/aspnet',
+    signals: [
+      { type: 'header', name: 'x-aspnet-version', weight: 0.95 },
+      { type: 'header', name: 'x-powered-by', pattern: /ASP\.NET/i, weight: 0.9 },
+      { type: 'cookie', pattern: /^(?:ASP\.NET_SessionId|\.AspNetCore)/, weight: 0.9 },
+    ],
+    version: [{ from: 'header', name: 'x-aspnet-version' }],
+  },
+  {
+    id: 'spring',
+    name: 'Spring',
+    category: 'backend',
+    description: 'Java application framework',
+    icon: 'spring',
+    website: 'https://spring.io',
+    signals: [
+      // JSESSIONID is the servlet-spec session cookie: Tomcat, Jetty, JBoss and
+      // every plain Java web app send it. It means "Java", which the `implies`
+      // above already carries — it does not mean Spring.
+      { type: 'cookie', pattern: /^JSESSIONID$/, weight: 0.35 },
+      { type: 'header', name: 'x-application-context', weight: 0.9 },
+    ],
+  },
+  {
+    id: 'phoenix',
+    name: 'Phoenix',
+    category: 'backend',
+    description: 'Elixir web framework',
+    icon: 'phoenixframework',
+    website: 'https://phoenixframework.org',
+    signals: [
+      { type: 'html', pattern: /phx-(?:main|socket|track-static)/, weight: 0.9 },
+      { type: 'script', pattern: /phoenix_live_view|phoenix\.js/, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'nestjs',
+    name: 'NestJS',
+    category: 'backend',
+    description: 'Structured Node.js framework',
+    icon: 'nestjs',
+    website: 'https://nestjs.com',
+    implies: ['nodejs'],
+    signals: [{ type: 'header', name: 'x-powered-by', pattern: /Nest/i, weight: 0.9 }],
+  },
+  {
+    id: 'deno',
+    name: 'Deno',
+    category: 'backend',
+    description: 'Secure JavaScript runtime',
+    icon: 'deno',
+    website: 'https://deno.com',
+    signals: [{ type: 'header', name: 'server', pattern: /^deno\b/i, weight: 0.9 }],
+  },
+  {
+    id: 'hono',
+    name: 'Hono',
+    category: 'backend',
+    description: 'Small, fast web framework for edge runtimes',
+    icon: 'hono',
+    website: 'https://hono.dev',
+    signals: [
+      { type: 'bundle', pattern: /\bhono\/(?:jsx|client|cors)\b|hono\/tiny/, weight: 0.85 },
+      { type: 'header', name: 'x-powered-by', pattern: /Hono/i, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'fastify',
+    name: 'Fastify',
+    category: 'backend',
+    description: 'Fast Node.js web framework',
+    icon: 'fastify',
+    website: 'https://fastify.dev',
+    signals: [
+      { type: 'header', name: 'x-powered-by', pattern: /Fastify/i, weight: 0.9 },
+      { type: 'header', name: 'x-fastify-id', weight: 0.9 },
+    ],
+  },
+  {
+    id: 'bun',
+    name: 'Bun',
+    category: 'backend',
+    description: 'JavaScript runtime and toolkit',
+    icon: 'bun',
+    website: 'https://bun.sh',
+    signals: [
+      { type: 'header', name: 'server', pattern: /\bBun\b/, weight: 0.9 },
+      { type: 'header', name: 'x-powered-by', pattern: /\bBun\b/, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'symfony',
+    name: 'Symfony',
+    category: 'backend',
+    description: 'PHP application framework',
+    icon: 'symfony',
+    website: 'https://symfony.com',
+    signals: [
+      { type: 'header', name: 'x-debug-token', weight: 0.85 },
+      { type: 'cookie', pattern: /^sf_redirect$|^symfony$/, weight: 0.9 },
+      { type: 'html', pattern: /\/_wdt\/[\w-]+|sf-toolbar/, weight: 0.85 },
+    ],
+  },
+  {
+    id: 'gin',
+    name: 'Gin',
+    category: 'backend',
+    description: 'Go web framework',
+    icon: 'go',
+    website: 'https://gin-gonic.com',
+    signals: [
+      { type: 'header', name: 'x-powered-by', pattern: /^Gin\b/i, weight: 0.85 },
+      { type: 'header', name: 'server', pattern: /^Gin\b/i, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'adonis',
+    name: 'AdonisJS',
+    category: 'backend',
+    description: 'Full-stack Node.js framework',
+    icon: 'adonisjs',
+    website: 'https://adonisjs.com',
+    signals: [
+      { type: 'cookie', pattern: /^adonis-session$/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'sinatra',
+    name: 'Sinatra',
+    category: 'backend',
+    description: 'Minimal Ruby web framework',
+    icon: 'ruby',
+    website: 'https://sinatrarb.com',
+    signals: [
+      { type: 'header', name: 'x-powered-by', pattern: /Sinatra/i, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'litestar',
+    name: 'Litestar',
+    category: 'backend',
+    description: 'Async Python API framework',
+    icon: 'python',
+    website: 'https://litestar.dev',
+    signals: [
+      { type: 'header', name: 'server', pattern: /litestar|uvicorn/i, weight: 0.5 },
+      { type: 'html', pattern: /\/schema\/(?:swagger|redoc|elements)\b/, weight: 0.5 },
+    ],
+  },
+  {
+    id: 'quarkus',
+    name: 'Quarkus',
+    category: 'backend',
+    description: 'Kubernetes-native Java framework',
+    icon: 'quarkus',
+    website: 'https://quarkus.io',
+    signals: [
+      { type: 'header', name: 'x-powered-by', pattern: /Quarkus/i, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'encore',
+    name: 'Encore',
+    category: 'backend',
+    description: 'Backend framework with built-in infrastructure',
+    icon: 'encore',
+    website: 'https://encore.dev',
+    signals: [
+      { type: 'header', name: 'x-encore-trace-id', weight: 0.95 },
+    ],
+  },
+]

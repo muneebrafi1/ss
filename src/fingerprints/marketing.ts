@@ -1,0 +1,293 @@
+import type { Fingerprint } from '@/types'
+
+/**
+ * Marketing automation, CRM, and advertising pixels.
+ *
+ * Reliably visible because tracking only works from the browser. Useful beyond
+ * curiosity — an agency or salesperson can read a site's go-to-market stack
+ * straight off this list.
+ */
+export const MARKETING: Fingerprint[] = [
+  {
+    id: 'hubspot',
+    name: 'HubSpot',
+    category: 'marketing',
+    description: 'CRM, marketing, and sales platform',
+    icon: 'hubspot',
+    website: 'https://hubspot.com',
+    signals: [
+      { type: 'global', path: '_hsq', weight: 0.95 },
+      { type: 'script', pattern: /js(?:-\w+)?\.hs-scripts\.com|js\.hsforms\.net|js\.hsadspixel\.net/, weight: 0.95 },
+      { type: 'request', pattern: /(?:track|forms)\.hubspot\.com|api\.hubapi\.com/, weight: 0.9 },
+      { type: 'cookie', pattern: /^(?:hubspotutk|__hs)/, weight: 0.85 },
+    ],
+  },
+  {
+    id: 'salesforce',
+    name: 'Salesforce',
+    category: 'marketing',
+    description: 'Enterprise CRM',
+    icon: 'salesforce',
+    website: 'https://salesforce.com',
+    signals: [
+      { type: 'request', pattern: /[\w-]+\.(?:my\.)?salesforce\.com|[\w-]+\.force\.com/, weight: 0.9 },
+      { type: 'script', pattern: /embeddedservice|sfdc-|pardot/, weight: 0.75 },
+    ],
+  },
+  {
+    id: 'braze',
+    name: 'Braze',
+    category: 'marketing',
+    description: 'Customer engagement platform',
+    icon: 'braze',
+    website: 'https://braze.com',
+    signals: [
+      { type: 'global', path: 'appboy', weight: 0.95 },
+      { type: 'global', path: 'braze', weight: 0.95 },
+      { type: 'request', pattern: /sdk\.iad-\d+\.braze\.com|[\w-]+\.braze(?:\.eu)?\.com/, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'iterable',
+    name: 'Iterable',
+    category: 'marketing',
+    description: 'Cross-channel marketing platform',
+    icon: 'iterable',
+    website: 'https://iterable.com',
+    signals: [{ type: 'request', pattern: /(^|\.)api\.iterable\.com|links\.\w+\.iterable\.com/, weight: 0.95 }],
+  },
+  {
+    id: 'meta-pixel',
+    name: 'Meta Pixel',
+    category: 'marketing',
+    description: 'Facebook and Instagram ad tracking',
+    icon: 'meta',
+    website: 'https://facebook.com/business/tools/meta-pixel',
+    signals: [
+      { type: 'global', path: 'fbq', weight: 0.95 },
+      { type: 'script', pattern: /connect\.facebook\.net\/.*\/fbevents\.js/, weight: 0.95 },
+      { type: 'request', pattern: /www\.facebook\.com\/tr\//, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'google-ads',
+    name: 'Google Ads',
+    category: 'marketing',
+    description: 'Ad conversion tracking and remarketing',
+    icon: 'googleads',
+    website: 'https://ads.google.com',
+    signals: [
+      { type: 'request', pattern: /googleads\.g\.doubleclick\.net|www\.googleadservices\.com/, weight: 0.9 },
+      { type: 'script', pattern: /googletagmanager\.com\/gtag\/js\?id=AW-/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'linkedin-insight',
+    name: 'LinkedIn Insight',
+    category: 'marketing',
+    description: 'LinkedIn ad conversion tracking',
+    icon: 'linkedin',
+    website: 'https://business.linkedin.com',
+    signals: [
+      { type: 'global', path: '_linkedin_partner_id', weight: 0.95 },
+      { type: 'script', pattern: /snap\.licdn\.com\/li\.lms-analytics/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'tiktok-pixel',
+    name: 'TikTok Pixel',
+    category: 'marketing',
+    description: 'TikTok ad conversion tracking',
+    icon: 'tiktok',
+    website: 'https://ads.tiktok.com',
+    signals: [
+      { type: 'global', path: 'ttq', weight: 0.95 },
+      { type: 'script', pattern: /analytics\.tiktok\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'reddit-pixel',
+    name: 'Reddit Pixel',
+    category: 'marketing',
+    description: 'Reddit ad conversion tracking',
+    icon: 'reddit',
+    website: 'https://ads.reddit.com',
+    signals: [
+      { type: 'global', path: 'rdt', weight: 0.9 },
+      { type: 'script', pattern: /www\.redditstatic\.com\/ads\/pixel\.js/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'attio',
+    name: 'Attio',
+    category: 'marketing',
+    description: 'Modern CRM',
+    icon: 'attio',
+    website: 'https://attio.com',
+    signals: [{ type: 'request', pattern: /(^|\.)api\.attio\.com/, weight: 0.95 }],
+  },
+  {
+    id: 'koala',
+    name: 'Koala',
+    category: 'marketing',
+    description: 'Buyer intent and website visitor tracking',
+    icon: 'koala',
+    website: 'https://getkoala.com',
+    signals: [
+      // `window.ko` is Knockout.js, still widely deployed on legacy .NET,
+      // SharePoint and Umbraco sites.
+      { type: 'global', path: 'ko.identify', weight: 0.9 },
+      { type: 'script', pattern: /cdn\.getkoala\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'rb2b',
+    name: 'RB2B',
+    category: 'marketing',
+    description: 'Identifies anonymous website visitors',
+    icon: 'rb2b',
+    website: 'https://rb2b.com',
+    signals: [{ type: 'script', pattern: /ddwl4m2hdecbv\.cloudfront\.net|s3\.amazonaws\.com\/rb2b/, weight: 0.9 }],
+  },
+  {
+    id: 'marketo',
+    name: 'Marketo',
+    category: 'marketing',
+    description: 'Marketing automation by Adobe',
+    icon: 'marketo',
+    website: 'https://business.adobe.com/products/marketo',
+    signals: [
+      { type: 'global', path: 'Munchkin', weight: 0.95 },
+      { type: 'script', pattern: /munchkin\.marketo\.net/, weight: 0.95 },
+      { type: 'request', pattern: /[\w-]+\.mktoresp\.com|\.marketo\.com\/index\.php/, weight: 0.9 },
+    ],
+  },
+  {
+    id: 'pardot',
+    name: 'Salesforce Account Engagement',
+    category: 'marketing',
+    description: 'B2B marketing automation, formerly Pardot',
+    icon: 'salesforce',
+    website: 'https://salesforce.com/marketing/b2b-automation',
+    signals: [
+      { type: 'global', path: 'piAId', weight: 0.9 },
+      { type: 'script', pattern: /pi\.pardot\.com|pardot\.com\/pd\.js/, weight: 0.95 },
+      { type: 'cookie', pattern: /^visitor_id\d+$/, weight: 0.8 },
+    ],
+  },
+  {
+    id: 'eloqua',
+    name: 'Oracle Eloqua',
+    category: 'marketing',
+    description: 'Enterprise marketing automation',
+    icon: 'oracle',
+    website: 'https://oracle.com/cx/marketing/automation',
+    signals: [
+      { type: 'global', path: '_elqQ', weight: 0.95 },
+      { type: 'script', pattern: /img\.en25\.com|\.eloqua\.com\/visitor/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'drip',
+    name: 'Drip',
+    category: 'marketing',
+    description: 'Ecommerce marketing automation',
+    icon: 'drip',
+    website: 'https://drip.com',
+    signals: [
+      { type: 'global', path: '_dcq', weight: 0.95 },
+      { type: 'script', pattern: /tag\.getdrip\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'omnisend',
+    name: 'Omnisend',
+    category: 'marketing',
+    description: 'Email and SMS for ecommerce',
+    icon: 'omnisend',
+    website: 'https://omnisend.com',
+    signals: [
+      { type: 'global', path: 'omnisend', weight: 0.9 },
+      { type: 'script', pattern: /omnisnippet\d*\.com|api\.omnisend\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'constant-contact',
+    name: 'Constant Contact',
+    category: 'marketing',
+    description: 'Email marketing for small business',
+    icon: 'constantcontact',
+    website: 'https://constantcontact.com',
+    signals: [
+      { type: 'script', pattern: /static\.ctctcdn\.com|constantcontact\.com\/[\w/]*signup/, weight: 0.95 },
+      { type: 'dom', selector: 'form[action*="constantcontact.com"]', weight: 0.9 },
+    ],
+  },
+  {
+    id: 'pipedrive',
+    name: 'Pipedrive',
+    category: 'marketing',
+    description: 'Sales CRM and pipelines',
+    icon: 'pipedrive',
+    website: 'https://pipedrive.com',
+    signals: [
+      { type: 'request', pattern: /api\.pipedrive\.com|leadbooster-chat\.pipedrive\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'clearbit',
+    name: 'Clearbit',
+    category: 'marketing',
+    description: 'Visitor identification and enrichment',
+    icon: 'clearbit',
+    website: 'https://clearbit.com',
+    signals: [
+      { type: 'request', pattern: /(?:x|tag|risk)\.clearbit\.com|logo\.clearbit\.com/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'apollo-io',
+    name: 'Apollo.io',
+    category: 'marketing',
+    description: 'Sales intelligence and outreach',
+    icon: 'apolloio',
+    website: 'https://apollo.io',
+    signals: [
+      { type: 'request', pattern: /assets\.apollo\.io|app\.apollo\.io\/api/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'warmly',
+    name: 'Warmly',
+    category: 'marketing',
+    description: 'Website visitor de-anonymization',
+    icon: 'warmly',
+    website: 'https://warmly.ai',
+    signals: [
+      { type: 'script', pattern: /opps-widget\.getwarmly\.com|warmly-script/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'zoho-crm',
+    name: 'Zoho CRM',
+    category: 'marketing',
+    description: 'CRM and sales automation',
+    icon: 'zoho',
+    website: 'https://zoho.com/crm',
+    signals: [
+      { type: 'global', path: '$zoho', weight: 0.85 },
+      { type: 'request', pattern: /(?:crm|salesiq)\.zoho\.(?:com|eu|in)/, weight: 0.95 },
+    ],
+  },
+  {
+    id: 'common-room',
+    name: 'Common Room',
+    category: 'marketing',
+    description: 'Community and buyer signal tracking',
+    icon: 'commonroom',
+    website: 'https://commonroom.io',
+    signals: [
+      { type: 'script', pattern: /cdn\.cr-relay\.com/, weight: 0.95 },
+    ],
+  },
+]

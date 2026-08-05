@@ -1,0 +1,176 @@
+/**
+ * Composes Chrome Web Store screenshots at the required 1280x800.
+ *
+ * The end-to-end run captures each surface at its true size — the panel really
+ * is 400x600 — which is the right thing for reviewing the design and the wrong
+ * thing for the store, which wants one fixed canvas. Upscaling a 400px panel to
+ * fill 1280 would be a blurry lie about what the product looks like, so each
+ * shot is placed at 1:1 on a themed ground with a caption instead.
+ *
+ * Reads only from `screenshots/`, so what ships is exactly what the browser
+ * rendered. Run after `npm run test:e2e`, which regenerates the sources.
+ *
+ *   node scripts/make-store-shots.mjs
+ */
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
+import sharp from 'sharp'
+
+const W = 1280
+const H = 800
+const OUT = 'store/screenshots'
+
+/** Light and dark grounds, taken from the extension's own tokens. */
+const THEME = {
+  light: { bg: '#F7F7F9', ink: '#16161C', muted: '#6B6B76', edge: '#E8E8EC' },
+  dark: { bg: '#0B0B0F', ink: '#F2F2F5', muted: '#8B8B96', edge: '#23232B' },
+}
+
+const SHOTS = [
+  {
+    out: '1-panel.png',
+    src: 'popup-light.png',
+    theme: 'light',
+    title: 'Every site, in one click',
+    body: 'Hosting, database, auth and payments — grouped by what matters most.',
+  },
+  {
+    out: '2-deep-scan.png',
+    src: 'popup-deep-scan.png',
+    theme: 'light',
+    title: 'Find what the network cannot show',
+    body: "Deep scan reads the page's own JavaScript to recover AI models and SDKs.",
+  },
+  {
+    out: '3-dark.png',
+    src: 'popup-dark.png',
+    theme: 'dark',
+    title: 'Designed for both themes',
+    body: 'Follows your browser. Neither theme is an afterthought.',
+  },
+  {
+    out: '4-report.png',
+    src: 'page-report.png',
+    theme: 'light',
+    title: 'The full stack, and a card worth posting',
+    body: 'Descriptions, exports, and a share image in two shapes.',
+  },
+  {
+    out: '5-catalogue.png',
+    src: 'page-technologies.png',
+    theme: 'light',
+    title: '532 technologies across 26 categories',
+    body: 'Browse everything StackLens can detect before you go looking for it.',
+  },
+]
+
+function caption(title, body, theme) {
+  const t = THEME[theme]
+  // Escaped for XML: an ampersand or angle bracket in copy would break the SVG.
+  const esc = (s) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="140">
+       <style>
+         .t { font: 600 34px ui-sans-serif, system-ui, sans-serif; fill: ${t.ink};
+              letter-spacing: -0.02em; }
+         .b { font: 400 19px ui-sans-serif, system-ui, sans-serif; fill: ${t.muted}; }
+       </style>
+       <text class="t" x="${W / 2}" y="52" text-anchor="middle">${esc(title)}</text>
+       <text class="b" x="${W / 2}" y="88" text-anchor="middle">${esc(body)}</text>
+     </svg>`,
+  )
+}
+
+await mkdir(OUT, { recursive: true })
+
+for (const shot of SHOTS) {
+  const source = resolve('screenshots', shot.src)
+  if (!existsSync(source)) {
+    console.error(`missing ${shot.src} — run npm run test:e2e first`)
+    process.exit(1)
+  }
+
+  const t = THEME[shot.theme]
+  const image = sharp(await readFile(source))
+  const meta = await image.metadata()
+
+  // Placed at 1:1 wherever it fits, and only scaled down if a page capture is
+  // taller than the space below the caption. Never scaled up.
+  const maxH = H - 190
+  const scale = Math.min(1, maxH / meta.height, (W - 160) / meta.width)
+  const width = Math.round(meta.width * scale)
+  const height = Math.round(meta.height * scale)
+
+  const panel = await image
+    .resize(width, height)
+    .composite([
+      {
+        // A hairline so a white panel does not dissolve into a light ground.
+        input: Buffer.from(
+          `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+             <rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}"
+                   rx="12" fill="none" stroke="${t.edge}"/>
+           </svg>`,
+        ),
+        top: 0,
+        left: 0,
+      },
+    ])
+    .png()
+    .toBuffer()
+
+  await sharp({
+    create: { width: W, height: H, channels: 4, background: t.bg },
+  })
+    .composite([
+      { input: caption(shot.title, shot.body, shot.theme), top: 44, left: 0 },
+      { input: panel, top: 190 + Math.round((maxH - height) / 2), left: Math.round((W - width) / 2) },
+    ])
+    .png()
+    .toFile(resolve(OUT, shot.out))
+
+  console.log(`${shot.out.padEnd(18)} ${shot.src} at ${width}x${height}`)
+}
+
+/*
+ * The 440x280 small promo tile.
+ *
+ * Optional for submission, required to be eligible for any placement the store
+ * curates — and it is the only artwork shown next to the extension in search
+ * results, so leaving it blank means the listing renders with a bare icon.
+ */
+const markSvg = (await readFile('icons/icon.svg', 'utf8'))
+  .replace(/<svg[^>]*>/, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="88" height="88">')
+
+await sharp({ create: { width: 440, height: 280, channels: 4, background: '#0B0B0F' } })
+  .composite([
+    { input: Buffer.from(markSvg), top: 54, left: 40 },
+    {
+      input: Buffer.from(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280">
+           <style>
+             .n { font: 600 34px ui-sans-serif, system-ui, sans-serif; fill: #F2F2F5;
+                  letter-spacing: -0.02em; }
+             .s { font: 400 16px ui-sans-serif, system-ui, sans-serif; fill: #8B8B96; }
+           </style>
+           <text class="n" x="150" y="128">StackLens</text>
+           <text class="s" x="150" y="156">See what any website</text>
+           <text class="s" x="150" y="178">is built with.</text>
+         </svg>`,
+      ),
+      top: 0,
+      left: 0,
+    },
+  ])
+  .png()
+  .toFile(resolve(OUT, 'promo-440x280.png'))
+
+console.log('promo-440x280.png   small promo tile')
+
+await writeFile(
+  resolve(OUT, 'README.md'),
+  `# Store screenshots\n\nGenerated by \`node scripts/make-store-shots.mjs\` from the captures in\n\`screenshots/\`, which \`npm run test:e2e\` regenerates from the real extension\nrunning in real Chrome. Every panel is placed at 1:1 — upscaling a 400px popup\nto fill 1280 would misrepresent what the product actually looks like.\n\nRegenerate after any UI change.\n`,
+)
+console.log(`\n${SHOTS.length} screenshots at ${W}x${H} in ${OUT}/`)

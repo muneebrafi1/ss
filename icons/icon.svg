@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!--
+    StackLens.
+
+    Three stacked layers: the literal subject of the product. Solid shapes
+    rather than strokes because strokes disintegrate at the 16px toolbar size,
+    and a saturated ground rather than a dark one because a dark icon merges
+    into the browser chrome on a dark theme and reads as a hole on a light one.
+
+    Descending opacity gives depth without a shadow, which would blur away at
+    small sizes.
+  -->
+  <defs>
+    <linearGradient id="sl-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7C6BFF"/>
+      <stop offset="1" stop-color="#4327D6"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="30" fill="url(#sl-bg)"/>
+  <path d="M64 20 L104 42 L64 64 L24 42 Z" fill="#fff"/>
+  <path d="M24 60 L64 82 L104 60 L104 73 L64 95 L24 73 Z" fill="#fff" opacity=".76"/>
+  <path d="M24 82 L64 104 L104 82 L104 95 L64 117 L24 95 Z" fill="#fff" opacity=".46"/>
+</svg>
