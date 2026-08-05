@@ -167,10 +167,39 @@ export function App() {
     }
   }
 
+  /*
+   * Everything below describes a specific page, so it is cleared when the page
+   * changes.
+   *
+   * The panel stays open across a redirect, a meta refresh or a client-side
+   * route change to a different host: `tabId` does not change, so the storage
+   * listener above refreshes `state` in place and the popup never remounts.
+   * Four pieces of state survived that and went on describing the previous
+   * page — the panel would render "Nothing here matches 'stripe'" for a site
+   * with no search box on screen to clear it and no keyboard route to one, and
+   * the footer would assert "Couldn't read scripts" about a page StackLens had
+   * never touched.
+   */
+  const pageKey = state ? `${state.tabId}|${state.hostname}` : null
+  useEffect(() => {
+    setQuery('')
+    setScanGain(null)
+    setScanFailed(false)
+    setScanOutcome(null)
+  }, [pageKey])
+
   const detections = state?.detections ?? []
+  /*
+   * A query can only narrow the list while the field that owns it is on screen.
+   * Below the threshold there is no way to see or clear the text, so letting it
+   * filter would hide cards with nothing to explain why — the reset effect above
+   * covers the navigation case, and this makes the state unreachable rather
+   * than merely unlikely.
+   */
+  const canFilter = detections.length >= SEARCH_THRESHOLD
   const filtered = useMemo(
-    () => detections.filter((detection) => matches(detection, query)),
-    [detections, query],
+    () => (canFilter ? detections.filter((detection) => matches(detection, query)) : detections),
+    [detections, query, canFilter],
   )
   const grouped = useMemo(() => groupDetections(filtered), [filtered])
 
@@ -247,9 +276,9 @@ export function App() {
     )
   }
 
-  const showSearch = detections.length >= SEARCH_THRESHOLD
+  const showSearch = canFilter
   const openCount = grouped.open.reduce((n, group) => n + group.detections.length, 0)
-  const searching = query.trim().length > 0
+  const searching = canFilter && query.trim().length > 0
 
   return (
     <Shell>

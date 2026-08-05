@@ -29,11 +29,40 @@ export function displayVersion(version: string | null): string | null {
   return version.replace(/-(?:20\d{2})[-]?(?:\d{2})[-]?(?:\d{2})$/, '')
 }
 
+/**
+ * "1 technology", "7 technologies".
+ *
+ * Lives here because three surfaces print this count and one of them — the
+ * Markdown export — hardcoded the plural, so a single-detection site exported
+ * "_1 technologies detected by StackLens._"
+ */
+export function countLabel(n: number): string {
+  return `${n} ${n === 1 ? 'technology' : 'technologies'}`
+}
+
 /** Categories that can be the subject of the sentence, most telling first. */
 const SUBJECT_ORDER: CategoryId[] = ['frameworks', 'cms', 'ecommerce', 'backend']
 
+/**
+ * Things in `frameworks` that are not what a site is *built on*.
+ *
+ * jQuery, Bootstrap and Tailwind are libraries a page includes, not the thing
+ * that produced it — and because `frameworks` outranks `cms`, any WordPress
+ * site that loads jQuery (which is most of them) was summarised as "jQuery on
+ * Cloudflare". WordPress could not appear anywhere in the sentence, since `cms`
+ * was absent from COMPANION_ORDER too. That sentence is the share-card headline,
+ * the first line of every Markdown export and the report subtitle, so the most
+ * common CMS on the web was invisible on the surface that matters most.
+ *
+ * A deny-list rather than a reordering: `frameworks` genuinely should outrank
+ * `cms` when the framework is Next.js or Rails, and reordering would have
+ * broken that to fix this.
+ */
+const NOT_A_SUBJECT = new Set(['jquery', 'bootstrap', 'tailwindcss'])
+
 /** Categories that follow "with", in the order they are worth mentioning. */
 const COMPANION_ORDER: CategoryId[] = [
+  'cms',
   'ecommerce',
   'database',
   'auth',
@@ -48,10 +77,15 @@ const COMPANION_ORDER: CategoryId[] = [
 const MAX_COMPANIONS = 2
 
 /** The strongest detection in a category, or null. */
-function pick(detections: Detection[], category: CategoryId): Detection | null {
+function pick(
+  detections: Detection[],
+  category: CategoryId,
+  exclude: Set<string> = new Set(),
+): Detection | null {
   let best: Detection | null = null
   for (const detection of detections) {
     if (detection.category !== category) continue
+    if (exclude.has(detection.id)) continue
     if (!best || detection.confidence > best.confidence) best = detection
   }
   return best
@@ -66,8 +100,10 @@ function join(names: string[]): string {
 export function stackSummary(detections: Detection[]): string | null {
   if (detections.length === 0) return null
 
-  const subjectCategory = SUBJECT_ORDER.find((category) => pick(detections, category) !== null)
-  const subject = subjectCategory ? pick(detections, subjectCategory) : null
+  const subjectCategory = SUBJECT_ORDER.find(
+    (category) => pick(detections, category, NOT_A_SUBJECT) !== null,
+  )
+  const subject = subjectCategory ? pick(detections, subjectCategory, NOT_A_SUBJECT) : null
   const host = pick(detections, 'hosting')
 
   const used = new Set<string>()
@@ -104,4 +140,21 @@ export function stackSummary(detections: Detection[]): string | null {
   }
 
   return companions.length > 0 ? `${head} with ${join(companions)}` : head
+}
+
+/**
+ * What to tell the user about a deep scan that has finished.
+ *
+ * The panel derives a richer label from the same outcome — it also knows how
+ * many detections the scan added — but the report page had no feedback at all:
+ * a scan where every fetch was CORS-blocked rendered identically to one that
+ * read every file and found nothing. These three cases are the distinction
+ * that matters, and they belong somewhere both surfaces can reach.
+ */
+export function deepScanMessage(outcome: { scanned: number; skipped: number } | null): string {
+  if (outcome === null) return 'Deep scan finished'
+  if (outcome.scanned > 0) {
+    return `Read ${outcome.scanned} ${outcome.scanned === 1 ? 'script' : 'scripts'}`
+  }
+  return outcome.skipped > 0 ? "Couldn't read this page's scripts" : 'No scripts to scan'
 }

@@ -1,4 +1,5 @@
 import { iconEntry } from '@/assets/icons.generated'
+import { channels, luminanceOf, needsDarkLift } from '@/lib/logo-contrast'
 
 /**
  * Renders a tool's logo.
@@ -21,35 +22,12 @@ import { iconEntry } from '@/assets/icons.generated'
  * text colour instead. Judged on both spread and luminance, so a genuinely
  * coloured mark is never flattened to grey.
  */
-function channels(hex: string): [number, number, number] {
-  const value = hex.replace('#', '')
-  const full = value.length === 3 ? value.replace(/./g, (c) => c + c) : value
-  return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16)) as [number, number, number]
-}
-
-function luminanceOf(hex: string): number {
-  const [r, g, b] = channels(hex)
-  return [r, g, b].some(Number.isNaN) ? 128 : (r * 299 + g * 587 + b * 114) / 1000
-}
-
 function isNearMonochrome(hex: string): boolean {
   const [r, g, b] = channels(hex)
   if ([r, g, b].some(Number.isNaN)) return false
   const spread = Math.max(r, g, b) - Math.min(r, g, b)
   const luminance = luminanceOf(hex)
   return spread < 24 && (luminance < 48 || luminance > 210)
-}
-
-/**
- * A coloured mark dark enough to disappear against the dark card.
- *
- * OpenAI's brand purple is the clearest case: perfectly legible on white, close
- * to invisible on near-black. Lifting it in dark mode keeps the brand's hue
- * while restoring contrast, which is better than either flattening it to grey
- * or leaving it unreadable.
- */
-function needsDarkLift(hex: string): boolean {
-  return luminanceOf(hex) < 90
 }
 
 /**

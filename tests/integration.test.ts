@@ -178,4 +178,36 @@ describe('stack summary', () => {
     const onlyShop = shop.filter((d) => d.category === 'ecommerce' || d.category === 'hosting')
     expect(stackSummary(onlyShop)).toMatch(/^Shopify store/)
   })
+
+  /*
+   * The most common shape on the web, and the one the sentence used to get
+   * wrong. `frameworks` outranks `cms`, jQuery lives in `frameworks`, and most
+   * WordPress sites load jQuery — so the headline read "jQuery on Cloudflare",
+   * and WordPress could not appear anywhere in the sentence because `cms` was
+   * missing from the companion list too.
+   *
+   * This string is the share-card headline, the first line of every Markdown
+   * export, the `summary` field of every JSON export and the report subtitle.
+   */
+  const wordpressSite = [
+    { id: 'jquery', name: 'jQuery', category: 'frameworks' as const, confidence: 0.9 },
+    { id: 'wordpress', name: 'WordPress', category: 'cms' as const, confidence: 0.98 },
+    { id: 'woocommerce', name: 'WooCommerce', category: 'ecommerce' as const, confidence: 0.95 },
+    { id: 'cloudflare', name: 'Cloudflare', category: 'hosting' as const, confidence: 0.9 },
+  ].map((d) => ({ ...d, description: '', icon: d.id, website: '', version: null, matched: [] }))
+
+  it('names the CMS, not the DOM library it happens to load', () => {
+    const summary = stackSummary(wordpressSite as never)
+    expect(summary).toBe('WordPress on Cloudflare with WooCommerce')
+    expect(summary).not.toMatch(/^jQuery/)
+  })
+
+  it('still prefers a real framework over the CMS category', () => {
+    const nextOnWordpress = [
+      ...wordpressSite,
+      { id: 'nextjs', name: 'Next.js', category: 'frameworks' as const, confidence: 0.95,
+        description: '', icon: 'nextdotjs', website: '', version: null, matched: [] },
+    ]
+    expect(stackSummary(nextOnWordpress as never)).toMatch(/^Next\.js/)
+  })
 })

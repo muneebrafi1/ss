@@ -1,7 +1,8 @@
 import { iconEntry } from '@/assets/icons.generated'
 import { STACKLENS_MARK_BODY, STACKLENS_NAME, stacklensLink } from '@/lib/brand'
 import { groupDetections } from '@/lib/grouping'
-import { displayVersion, stackSummary } from '@/lib/summary'
+import { cardLogoFill, luminanceOf } from '@/lib/logo-contrast'
+import { countLabel, displayVersion, stackSummary } from '@/lib/summary'
 import type { Detection } from '@/types'
 
 /**
@@ -155,16 +156,6 @@ function roundedRect(
   ctx.closePath()
 }
 
-function luminanceOf(hex: string): number {
-  const value = hex.replace('#', '')
-  return (
-    (parseInt(value.slice(0, 2), 16) * 299 +
-      parseInt(value.slice(2, 4), 16) * 587 +
-      parseInt(value.slice(4, 6), 16) * 114) /
-    1000
-  )
-}
-
 /** `letterSpacing` is well supported in Chrome but absent from some DOM typings. */
 function setLetterSpacing(ctx: CanvasRenderingContext2D, value: string): void {
   ;(ctx as unknown as { letterSpacing?: string }).letterSpacing = value
@@ -207,7 +198,7 @@ function logoImage(detection: Detection, size: number): Promise<HTMLImageElement
 
   // Monochrome marks that would vanish against the dark card are lifted to the
   // text colour; brand artwork keeps its own colours.
-  const fill = entry.mono ? (luminanceOf(entry.hex) < 60 ? INK : entry.hex) : undefined
+  const fill = entry.mono ? cardLogoFill(entry.hex) : undefined
   return svgImage(entry.body, entry.vb ?? '0 0 24 24', size * SCALE, fill)
 }
 
@@ -486,6 +477,7 @@ export async function renderShareCard({
    * nineteen would misrepresent the site.
    */
   const hidden = detections.length - shownTools.length
+  let notedInGrid = false
   if (hidden > 0) {
     let shortest = 0
     for (let i = 1; i < L.columns; i++) {
@@ -498,6 +490,7 @@ export async function renderShareCard({
       ctx.textAlign = 'left'
       ctx.textBaseline = 'alphabetic'
       ctx.fillText(`+${hidden} more`, L.padX + shortest * columnWidth, y)
+      notedInGrid = true
     }
   }
 
@@ -530,8 +523,24 @@ export async function renderShareCard({
 
   ctx.textAlign = 'right'
   ctx.fillStyle = MUTED
+  /*
+   * The footer is the fallback when the grid could not say it.
+   *
+   * The "+N more" note is placed AFTER packing has consumed the body, so its
+   * baseline only clears `bodyBottom` when the grid is sparse — meaning it was
+   * suppressed on precisely the cards that hide the most. A site with fourteen
+   * categories shipped a card showing eighteen tiles with nothing to suggest
+   * twenty-seven were missing.
+   *
+   * Reserving space before packing would mean re-tuning every layout, and the
+   * packer is the most load-bearing geometry in this file. The footer already
+   * prints the true total, so "18 of 45 technologies" costs a string and gets
+   * the honesty either way.
+   */
   ctx.fillText(
-    `${detections.length} ${detections.length === 1 ? 'technology' : 'technologies'}`,
+    notedInGrid || hidden === 0
+      ? countLabel(detections.length)
+      : `${shownTools.length} of ${countLabel(detections.length)}`,
     L.width - L.padX,
     L.footerBaseline,
   )

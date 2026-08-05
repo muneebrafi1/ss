@@ -2,7 +2,7 @@ import { CATEGORY_BY_ID } from '@/fingerprints'
 import type { Detection } from '@/types'
 import { STACKLENS_NAME } from './brand'
 import { groupDetections } from './grouping'
-import { stackSummary } from './summary'
+import { countLabel, stackSummary } from './summary'
 
 /**
  * Export formats.
@@ -44,7 +44,7 @@ export function toMarkdown(hostname: string, detections: Detection[]): string {
     lines.push('')
   }
 
-  lines.push(`_${detections.length} technologies detected by ${STACKLENS_NAME}._`)
+  lines.push(`_${countLabel(detections.length)} detected by ${STACKLENS_NAME}._`)
   return lines.join('\n')
 }
 

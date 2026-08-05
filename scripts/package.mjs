@@ -51,13 +51,30 @@ const stray = execSync(
 if (stray) problems.push(`dev artifacts in dist:\n    ${stray.split('\n').join('\n    ')}`)
 
 /* Every declared permission must be reachable in the shipped code. -------- */
-const code = execSync('cat dist/*.js dist/chunks/*.js').toString()
+/*
+ * The fingerprint chunk is excluded deliberately.
+ *
+ * It is 155KB of vendor names, descriptions and regexes, and it collides with
+ * almost every needle here: "cookies" appears in the CookieScript entry,
+ * "scripting" inside PHP's description, "storage" 56 times across the storage
+ * category. Concatenating it meant the check passed on prose rather than on
+ * call sites — `chrome.cookies.getAll` could have been deleted entirely and
+ * this would still have reported the permission as used.
+ */
+const code = execSync(
+  'cat dist/*.js $(ls dist/chunks/*.js | grep -v fingerprints)',
+  { shell: '/bin/bash' },
+).toString()
+
+/*
+ * Matched against the actual API call, not the bare word, for the same reason.
+ */
 const USES = {
-  webRequest: 'webRequest',
-  storage: 'storage',
-  cookies: 'cookies',
-  scripting: 'scripting',
-  tabs: 'tabs',
+  webRequest: 'chrome.webRequest.',
+  storage: 'chrome.storage.',
+  cookies: 'chrome.cookies.',
+  scripting: 'chrome.scripting.',
+  tabs: 'chrome.tabs.',
   favicon: '_favicon',
 }
 for (const permission of manifest.permissions ?? []) {

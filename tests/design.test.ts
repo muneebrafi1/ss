@@ -1,6 +1,8 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { ICONS } from '@/assets/icons.generated'
+import { cardLogoFill, luminanceOf, needsDarkLift } from '@/lib/logo-contrast'
 
 /**
  * Guards on the design system itself.
@@ -118,5 +120,54 @@ describe('type scale', () => {
       }
     }
     expect(offenders).toEqual([])
+  })
+})
+
+/**
+ * The share card is the extension's only organic distribution channel, so a
+ * logo that renders as an empty tile there costs more than one that renders
+ * badly anywhere else.
+ */
+describe('share card logos', () => {
+  /** Kept in step with the constants in src/lib/share-image.ts. */
+  const CARD_BACKGROUND = '#0B0B0F'
+  const CARD_INK = '#F2F2F5'
+  const TILE_OVER_BACKGROUND = '#15151A'
+
+  const monoIcons = Object.values(ICONS).filter(
+    (icon): icon is typeof icon & { hex: string } => Boolean(icon?.mono && icon.hex),
+  )
+
+  it('has monochrome icons to check', () => {
+    expect(monoIcons.length).toBeGreaterThan(100)
+  })
+
+  it('draws every monochrome mark at 3:1 or better on the card', () => {
+    const failures: string[] = []
+    for (const icon of monoIcons) {
+      // Exactly what logoImage() picks.
+      const fill = cardLogoFill(icon.hex)
+      const ratio = contrast(fill, TILE_OVER_BACKGROUND)
+      if (ratio < 3) failures.push(`${icon.hex} -> ${fill} is ${ratio.toFixed(2)}:1`)
+    }
+    expect(failures).toEqual([])
+  })
+
+  /*
+   * The failure that motivated the shared module. One icon ships `#000`, and
+   * the card's own hex parser could not read the 3-digit form: every channel
+   * came back NaN, `NaN < 60` is false, so it drew pure black on near-black.
+   * A comparison against NaN fails silently in whichever direction hides it.
+   */
+  it('never resolves a colour to NaN', () => {
+    const broken = monoIcons
+      .filter((icon) => Number.isNaN(luminanceOf(icon.hex)))
+      .map((icon) => icon.hex)
+    expect(broken).toEqual([])
+  })
+
+  it('lifts a 3-digit black to the ink colour', () => {
+    expect(needsDarkLift('#000')).toBe(true)
+    expect(contrast(CARD_INK, CARD_BACKGROUND)).toBeGreaterThan(3)
   })
 })

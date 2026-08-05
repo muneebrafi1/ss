@@ -69,6 +69,10 @@ export function TechnologiesApp() {
       >
         <button
           type="button"
+          // Every sibling chip reports its state; this one — the one selected on
+          // load — did not, so a screen-reader user could not tell which filter
+          // was active until they pressed a different one.
+          aria-pressed={category === 'all'}
           onClick={() => setCategory('all')}
           className={`rounded-full border px-2.5 py-1 text-sm transition-colors ${
             category === 'all'

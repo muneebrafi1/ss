@@ -65,7 +65,13 @@ export function HistoryApp() {
   async function forget(hostname: string) {
     const response = await sendMessage({ type: 'FORGET_SITE', hostname })
     if (response.ok && 'history' in response) setEntries(response.history)
-    else setEntries([])
+    // A failed delete used to set the list to [], so the page rendered "No
+    // sites yet" and "0 sites remembered on this device" while every entry was
+    // still in storage — and hid Clear all, the one control that would have
+    // fixed it. sendMessage rejects whenever the worker cannot answer, which is
+    // every extension update with this tab open, so this was reachable in
+    // ordinary use. Both neighbouring handlers already do it this way.
+    else flash('Could not forget that site')
   }
 
   async function toggleHistory(enabled: boolean) {

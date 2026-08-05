@@ -12,7 +12,7 @@ import {
   renderShareCard,
   type ShareFormat,
 } from '@/lib/share-image'
-import { stackSummary } from '@/lib/summary'
+import { countLabel, deepScanMessage, stackSummary } from '@/lib/summary'
 import { sendMessage, type PanelState } from '@/messages'
 import { Button, EmptyPanel, Page, Toast, useToast } from '@/ui/Page'
 import { TechList } from '@/ui/TechList'
@@ -36,6 +36,7 @@ export function ReportApp() {
   const [format, setFormat] = useState<ShareFormat>('landscape')
   const [preview, setPreview] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
+  const [scanning, setScanning] = useState(false)
   const [toast, flash] = useToast()
 
   const load = useCallback(async () => {
@@ -82,10 +83,27 @@ export function ReportApp() {
 
   // Resolves through `resolveTargetTab` in the worker, which exists precisely so
   // the extension's own pages can act on the page the user came from.
+  /*
+   * A scan is up to twelve fetches at an 8s timeout, so this can run for
+   * seconds. It previously held no pending flag, left the button enabled, and
+   * threw away the outcome — so the page sat unchanged throughout, a second
+   * click started a second full scan, and a scan where every fetch was blocked
+   * re-rendered pixel-identically to one that read everything and found nothing.
+   */
   async function deepScan() {
-    const response = await sendMessage({ type: 'RUN_DEEP_SCAN' })
-    if (response.ok && 'state' in response) setState(response.state)
-    else flash('Deep scan failed')
+    if (scanning) return
+    setScanning(true)
+    try {
+      const response = await sendMessage({ type: 'RUN_DEEP_SCAN' })
+      if (response.ok && 'state' in response) {
+        setState(response.state)
+        flash(deepScanMessage(response.state.deepScan))
+      } else {
+        flash('Deep scan failed')
+      }
+    } finally {
+      setScanning(false)
+    }
   }
 
   function exportAs(exportFormat: ExportFormat) {
@@ -99,14 +117,23 @@ export function ReportApp() {
   const detections = state?.detections ?? []
   const unsupported = state && state.status !== 'ready'
   const summary = stackSummary(detections)
-  const countLabel = `${detections.length} ${detections.length === 1 ? 'technology' : 'technologies'}`
+  const count = countLabel(detections.length)
+
+  /*
+   * `unsupported` is null while `state` is, so the subtitle used to fall through
+   * to the count and assert "0 technologies" directly above the "StackLens
+   * couldn't read this page" panel — a specific claim about a page it had just
+   * said it could not read.
+   */
+  const subtitle =
+    state === null || failed || unsupported
+      ? undefined
+      : summary
+        ? `${summary} · ${count}`
+        : count
 
   return (
-    <Page
-      current="report"
-      title={state?.hostname || 'This site'}
-      subtitle={unsupported ? undefined : summary ? `${summary} · ${countLabel}` : countLabel}
-    >
+    <Page current="report" title={state?.hostname || 'This site'} subtitle={subtitle}>
       {failed ? (
         <EmptyPanel
           title="StackLens couldn't read this page"
@@ -153,7 +180,11 @@ export function ReportApp() {
         <EmptyPanel
           title="Nothing detected here"
           body="This site may use tools we can't detect from the browser. A deep scan searches the page's own JavaScript."
-          action={<Button variant="primary" onClick={() => void deepScan()}>Run deep scan</Button>}
+          action={
+            <Button variant="primary" disabled={scanning} onClick={() => void deepScan()}>
+              {scanning ? 'Scanning…' : 'Run deep scan'}
+            </Button>
+          }
         />
       ) : (
         <>
