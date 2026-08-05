@@ -42,6 +42,23 @@ let settings: Settings = DEFAULT_SETTINGS
 const tabHosts = new Map<number, string>()
 
 /**
+ * Whether the in-memory mirrors above can be trusted yet.
+ *
+ * MV3 wakes this worker *because* an event arrived, and dispatches that event
+ * immediately after top-level evaluation — while `hydrate()` is still awaiting
+ * `chrome.storage.local`. Until it resolves, `settings` is the DEFAULTS object,
+ * which says scanning is on and no host is disabled. Reading it during that
+ * window makes both off switches silently fail open on exactly the navigation
+ * that woke the worker.
+ *
+ * So collection is closed until proven open. The cost is the first few hundred
+ * milliseconds of a cold navigation; the alternative is collecting from a site
+ * the user explicitly switched off, which the settings page, the panel and the
+ * privacy policy all promise does not happen.
+ */
+let hydrated = false
+
+/**
  * The last ordinary web page the user was looking at.
  *
  * The full-page views run in their own tab, which makes them the active tab the
@@ -49,6 +66,23 @@ const tabHosts = new Map<number, string>()
  * user came from, not the report describing it.
  */
 let lastWebTabId: number | null = null
+
+/**
+ * Tabs belonging to an incognito window.
+ *
+ * The extension declares no `incognito` key, so it defaults to spanning mode:
+ * tick "Allow in Incognito" — an ordinary thing to do for a browsing tool — and
+ * this single worker starts receiving tab and request events for private
+ * windows. History is written to `chrome.storage.local`, which outlives the
+ * incognito session, so without this set a private browsing session leaves a
+ * permanent on-disk record of every site visited. Nothing else in the product
+ * would reveal it: the entry looks identical to an ordinary one.
+ *
+ * Evidence is deliberately still collected — it lives in `chrome.storage.session`,
+ * dies with the browser, and is what makes the panel work at all. It is only the
+ * durable record that incognito must not produce.
+ */
+const incognitoTabs = new Set<number>()
 
 function hostOf(url: string): string {
   try {
@@ -69,11 +103,13 @@ async function hydrate(): Promise<void> {
     const tabs = await chrome.tabs.query({})
     for (const tab of tabs) {
       if (tab.id !== undefined && tab.url) tabHosts.set(tab.id, hostOf(tab.url))
+      if (tab.id !== undefined && tab.incognito) incognitoTabs.add(tab.id)
       if (tab.active && tab.id !== undefined && isScannable(tab.url ?? '')) lastWebTabId = tab.id
     }
   } catch {
     // Tab enumeration can fail during startup; navigation events refill it.
   }
+  hydrated = true
 }
 
 void hydrate()
@@ -91,10 +127,20 @@ chrome.storage.onChanged.addListener((changes, area) => {
  * costs nothing rather than being collected and filtered out later.
  */
 function shouldCollect(tabId: number): boolean {
+  if (!hydrated) return false
   if (!settings.enabled) return false
   const hostname = tabHosts.get(tabId)
-  if (hostname === undefined) return true
+  // Fail closed. An unknown hostname used to mean "collect anyway", so a tab
+  // whose host had not yet been cached — every tab, on every worker wake — was
+  // collected regardless of whether the user had switched that site off.
+  if (hostname === undefined) return false
   return isHostEnabled(settings, hostname)
+}
+
+/** Whether a durable record may be written for this tab. */
+function mayRecordHistory(tabId: number, incognito: boolean): boolean {
+  if (!settings.historyEnabled) return false
+  return !incognito && !incognitoTabs.has(tabId)
 }
 
 /* -------------------------------------------------------------------------- */
@@ -121,17 +167,30 @@ async function detectForTab(tabId: number): Promise<Detection[]> {
 /* Navigation                                                                  */
 /* -------------------------------------------------------------------------- */
 
-registerNetworkListeners(shouldCollect)
+registerNetworkListeners(shouldCollect, (tabId, hostname) => {
+  tabHosts.set(tabId, hostname)
+})
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   const url = changeInfo.url ?? tab.url
   if (!url) return
+  if (tab.incognito) incognitoTabs.add(tabId)
 
   // Evidence is reset by the main-frame request listener, which runs earlier;
   // this only keeps the hostname cache and badge in step.
   if (changeInfo.url) {
     tabHosts.set(tabId, hostOf(url))
-    void setBadge(tabId, 0)
+    /*
+     * Only a real document load clears the count.
+     *
+     * `onUpdated` also fires with a new `url` and no `status` for
+     * history.pushState and for plain `#anchor` clicks — and no `status:
+     * 'complete'` ever follows a same-document navigation. Zeroing the badge
+     * unconditionally meant clicking any in-page anchor, or any route change in
+     * a single-page app, emptied the badge for good while the panel behind it
+     * still held the full detection list.
+     */
+    if (changeInfo.status !== undefined) void setBadge(tabId, 0)
     if (!isScannable(url)) void clearEvidence(tabId)
   }
 
@@ -154,8 +213,16 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
     const detections = await detectForTab(tabId)
     await setBadge(tabId, detections.length)
-    if (settings.historyEnabled) await recordScan(hostOf(url), url, detections)
+    if (mayRecordHistory(tabId, tab.incognito)) await recordScan(hostOf(url), url, detections)
   })()
+})
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  // Both mirrors are keyed by tab id, and Chrome reuses ids freely. Leaving a
+  // closed incognito tab's id in the set would make a later ordinary tab that
+  // inherits it silently stop recording history.
+  incognitoTabs.delete(tabId)
+  tabHosts.delete(tabId)
 })
 
 chrome.tabs.onActivated.addListener(({ tabId }) => {
@@ -310,7 +377,11 @@ chrome.runtime.onMessage.addListener(
              * holding the bundle-only detections is discarded on the next
              * navigation. So the headline results never reached History.
              */
-            if (settings.historyEnabled && state.status === 'ready' && state.hostname) {
+            if (
+              mayRecordHistory(tab.id, tab.incognito) &&
+              state.status === 'ready' &&
+              state.hostname
+            ) {
               await recordScan(state.hostname, state.url, state.detections)
             }
 

@@ -56,7 +56,14 @@ export const BACKEND: Fingerprint[] = [
     signals: [
       { type: 'cookie', pattern: /^laravel_session$/, weight: 0.95 },
       { type: 'cookie', pattern: /^XSRF-TOKEN$/, weight: 0.5 },
-      { type: 'html', pattern: /laravel_session|livewire/, weight: 0.6 },
+      // `livewire` as a bare word matched the product being named in prose or a
+      // comment. The wire: directives and the bundle filename are what a page
+      // actually running Livewire emits, and they raise recall besides.
+      {
+        type: 'html',
+        pattern: /laravel_session|wire:(?:model|click|submit|poll|loading)|livewire\.js/,
+        weight: 0.6,
+      },
     ],
   },
   {
@@ -93,9 +100,25 @@ export const BACKEND: Fingerprint[] = [
     website: 'https://fastapi.tiangolo.com',
     implies: ['python'],
     signals: [
-      { type: 'header', name: 'server', pattern: /uvicorn/i, weight: 0.75 },
-      { type: 'request', pattern: /\/openapi\.json(?:$|\?)/, weight: 0.7 },
-      { type: 'request', pattern: /\/(?:docs|redoc)(?:$|\?)/, weight: 0.4 },
+      // Both of these are FastAPI-adjacent rather than FastAPI-specific:
+      // uvicorn serves Starlette, Litestar, Django-ASGI and anything else ASGI
+      // (python's own entry claims it at 0.9, which is the correct home), and
+      // /openapi.json is a first-party path any OpenAPI generator can serve.
+      // Either one alone used to clear the threshold; now they must corroborate.
+      //
+      // `/docs` is gone rather than merely reduced. It is a documentation path
+      // on an enormous share of the web and carries almost no information about
+      // the backend — and because noisy-OR assumes signals are INDEPENDENT,
+      // three correlated path shapes at 0.4 combined to 0.78 and detected
+      // FastAPI on a page that served nothing but ordinary paths. Weak evidence
+      // stacked is not strong evidence when the weakness has a common cause.
+      //
+      // What is left needs an ASGI server AND an OpenAPI document — two
+      // different evidence types, which is what noisy-OR is actually for. That
+      // still cannot separate FastAPI from Starlette or Litestar, and it is not
+      // meant to: this database would rather miss a framework than invent one.
+      { type: 'header', name: 'server', pattern: /uvicorn/i, weight: 0.4 },
+      { type: 'request', pattern: /\/openapi\.json(?:$|\?)/, weight: 0.4 },
     ],
   },
   {
@@ -144,7 +167,10 @@ export const BACKEND: Fingerprint[] = [
     icon: 'spring',
     website: 'https://spring.io',
     signals: [
-      { type: 'cookie', pattern: /^JSESSIONID$/, weight: 0.7 },
+      // JSESSIONID is the servlet-spec session cookie: Tomcat, Jetty, JBoss and
+      // every plain Java web app send it. It means "Java", which the `implies`
+      // above already carries — it does not mean Spring.
+      { type: 'cookie', pattern: /^JSESSIONID$/, weight: 0.35 },
       { type: 'header', name: 'x-application-context', weight: 0.9 },
     ],
   },

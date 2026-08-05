@@ -160,7 +160,9 @@ export const FLAGS: Fingerprint[] = [
     icon: 'convert',
     website: 'https://convert.com',
     signals: [
-      { type: 'global', path: 'convert', weight: 0.8 },
+      // An ordinary English word, and a plausible name for any page's own
+      // helper function or a `<button id="convert">`.
+      { type: 'global', path: 'convert', weight: 0.35 },
       { type: 'script', pattern: /cdn-\d+\.convertexperiments\.com/, weight: 0.95 },
     ],
   },

@@ -134,7 +134,9 @@ export const MARKETING: Fingerprint[] = [
     icon: 'koala',
     website: 'https://getkoala.com',
     signals: [
-      { type: 'global', path: 'ko', weight: 0.7 },
+      // `window.ko` is Knockout.js, still widely deployed on legacy .NET,
+      // SharePoint and Umbraco sites.
+      { type: 'global', path: 'ko.identify', weight: 0.9 },
       { type: 'script', pattern: /cdn\.getkoala\.com/, weight: 0.95 },
     ],
   },

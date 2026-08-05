@@ -117,7 +117,9 @@ export const HOSTING: Fingerprint[] = [
     website: 'https://heroku.com',
     signals: [
       { type: 'header', name: 'via', pattern: /vegur/i, weight: 0.9 },
-      { type: 'header', name: 'server', pattern: /^Cowboy$/i, weight: 0.8 },
+      // Cowboy is the standard Erlang/Elixir HTTP server — every self-hosted
+      // Phoenix app sends it, and almost none of them are on Heroku.
+      { type: 'header', name: 'server', pattern: /^Cowboy$/i, weight: 0.3 },
       { type: 'request', pattern: /[\w-]+\.herokuapp\.com\//, weight: 0.9 },
     ],
   },
@@ -144,7 +146,9 @@ export const HOSTING: Fingerprint[] = [
     signals: [
       { type: 'header', name: 'x-served-by', pattern: /cache-/i, weight: 0.85 },
       { type: 'header', name: 'x-fastly-request-id', weight: 0.95 },
-      { type: 'header', name: 'via', pattern: /varnish/i, weight: 0.6 },
+      // Varnish is open-source and self-hosted far more often than it is
+      // Fastly's edge. `Via: 1.1 varnish` alone proves a cache, not a vendor.
+      { type: 'header', name: 'via', pattern: /varnish/i, weight: 0.3 },
     ],
   },
   {

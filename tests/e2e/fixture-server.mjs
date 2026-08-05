@@ -400,6 +400,14 @@ fetch("/ingest/envelope", {mode:"no-cors", method:"POST"}).catch(function(){});
 fetch("/docs", {mode:"no-cors"}).catch(function(){});
 fetch("/api/auth/session", {mode:"no-cors"}).catch(function(){});
 fetch("/v1/chat/completions", {mode:"no-cors", method:"POST"}).catch(function(){});
+// Any OpenAPI generator serves this; it is not evidence of FastAPI. The guard
+// in run.mjs asserted FastAPI was not guessed from a path shape long before the
+// fixture actually requested the path that provoked it.
+fetch("/openapi.json", {mode:"no-cors"}).catch(function(){});
+// Ordinary storefront and auth paths, which used to carry Medusa and Supabase
+// Auth on their own.
+fetch("/store/products?limit=10", {mode:"no-cors"}).catch(function(){});
+fetch("/auth/v1/token", {mode:"no-cors", method:"POST"}).catch(function(){});
 `
 
 /*

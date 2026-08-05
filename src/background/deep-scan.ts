@@ -1,5 +1,5 @@
 import type { Evidence } from '@/types'
-import { recordEvidence } from './store'
+import { currentToken, recordEvidence } from './store'
 
 /**
  * Deep scan: downloads the page's JavaScript bundles and pattern-matches them.
@@ -103,7 +103,12 @@ async function fetchText(url: string): Promise<string | null> {
  * once the fetching has actually finished — a half-finished scan must not make
  * bundle-only detections appear and then vanish.
  */
-export async function runDeepScan(tabId: number, evidence: Evidence): Promise<DeepScanOutcome> {
+export async function runDeepScan(
+  tabId: number,
+  evidence: Evidence,
+): Promise<DeepScanOutcome | null> {
+  // Captured before anything is fetched; see the check at the end.
+  const startedAt = currentToken(tabId)
   const urls = selectBundleUrls(evidence)
   const bundles: string[] = []
   let bytes = 0
@@ -136,6 +141,22 @@ export async function runDeepScan(tabId: number, evidence: Evidence): Promise<De
    * left the user permanently unable to retry the one action that reaches the
    * network, on the strength of a scan that read nothing.
    */
+  /*
+   * Results belong to the page that was scanned, not to whatever the tab holds
+   * now.
+   *
+   * A scan is up to twelve fetches at an 8s timeout each, so it routinely runs
+   * for seconds — plenty of time for the user to click a link. `recordEvidence`
+   * reads the navigation token when it is called, so the bundles would be
+   * merged into the NEW page's record, and the panel would name technologies
+   * found in the previous site's JavaScript as belonging to this one. That is
+   * the worst failure this product has: a confident, specific, wrong answer,
+   * with no way for the user to tell.
+   *
+   * The token is captured before the first fetch by the caller and compared
+   * here. If it moved, the download is thrown away.
+   */
+  if (currentToken(tabId) !== startedAt) return null
   if (bundles.length > 0) recordEvidence(tabId, { bundles, deepScanned: true })
   return { scanned: bundles.length, bytes, skipped }
 }

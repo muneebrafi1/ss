@@ -67,7 +67,10 @@ export const MONITORING: Fingerprint[] = [
     icon: 'highlight',
     website: 'https://highlight.io',
     signals: [
-      { type: 'global', path: 'H', weight: 0.7 },
+      // `window.H` is the HERE Maps v3 namespace — this same database matches
+      // `H.Map` for here-maps in maps.ts, so the database itself asserted that
+      // H means HERE while claiming here it means Highlight. A single uppercase
+      // letter cannot be vendor-namespaced.
       { type: 'request', pattern: /pub\.highlight\.(?:run|io)|(^|\.)api\.highlight\.run/, weight: 0.95 },
       { type: 'bundle', pattern: /highlight\.run|@highlight-run\//, weight: 0.85 },
     ],

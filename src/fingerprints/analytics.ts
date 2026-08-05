@@ -32,7 +32,12 @@ export const ANALYTICS: Fingerprint[] = [
     website: 'https://tagmanager.google.com',
     signals: [
       { type: 'script', pattern: /googletagmanager\.com\/gtm\.js/, weight: 0.95 },
-      { type: 'global', path: 'dataLayer', weight: 0.7 },
+      // Shared infrastructure, not a container. The standard GA4 snippet is
+      // `window.dataLayer = window.dataLayer || []` with no Tag Manager
+      // anywhere, so at 0.7 this claimed GTM on every gtag.js site on the web —
+      // including this project's own WordPress fixture. gtm.js and the ns.html
+      // iframe below are the signals that actually mean a container exists.
+      { type: 'global', path: 'dataLayer', weight: 0.35 },
       { type: 'html', pattern: /googletagmanager\.com\/ns\.html/, weight: 0.85 },
     ],
   },
@@ -111,7 +116,9 @@ export const ANALYTICS: Fingerprint[] = [
     icon: 'segment',
     website: 'https://segment.com',
     signals: [
-      { type: 'global', path: 'analytics', weight: 0.6 },
+      // `window.analytics` is Segment's convention but not Segment's property —
+      // plenty of sites define their own. At 0.6 it cleared the bar alone.
+      { type: 'global', path: 'analytics', weight: 0.35 },
       { type: 'request', pattern: /(?:^|\.)(?:api|cdn)\.segment\.(?:com|io)/, weight: 0.95 },
       { type: 'script', pattern: /cdn\.segment\.com\/analytics\.js/, weight: 0.95 },
       { type: 'cookie', pattern: /^ajs_(?:user_id|anonymous_id)$/, weight: 0.9 },

@@ -54,11 +54,28 @@ export async function removeFromHistory(hostname: string): Promise<HistoryEntry[
  * domain forty times is a browsing log, which is both less useful and a good
  * deal more sensitive than a list of what each site is built with.
  */
-export async function recordScan(
-  hostname: string,
-  url: string,
-  detections: Detection[],
-): Promise<void> {
+/**
+ * Serialises the read-modify-write above.
+ *
+ * `recordScan` reads the whole array, prepends one entry and writes it all back,
+ * and every tab that finishes loading calls it independently from an un-awaited
+ * async block. Restore a session of ten tabs and they all read the same array
+ * before any of them writes, so nine of the ten entries are overwritten and lost
+ * — silently, since the write itself succeeds. Evidence writes already queue
+ * per tab in store.ts; history needs one global queue because every caller is
+ * contending for the same key.
+ */
+let queue: Promise<void> = Promise.resolve()
+
+export function recordScan(hostname: string, url: string, detections: Detection[]): Promise<void> {
+  const next = queue.then(() => writeScan(hostname, url, detections))
+  // The chain must survive a rejected link, or one failed write stops history
+  // forever.
+  queue = next.catch(() => {})
+  return next
+}
+
+async function writeScan(hostname: string, url: string, detections: Detection[]): Promise<void> {
   if (!hostname || detections.length === 0) return
 
   const entries = (await getHistory()).filter((entry) => entry.hostname !== hostname)

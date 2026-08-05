@@ -100,7 +100,10 @@ export const AI_SDKS: Fingerprint[] = [
     icon: 'onnx',
     website: 'https://onnxruntime.ai',
     signals: [
-      { type: 'script', pattern: /onnxruntime-web|ort(?:\.min)?\.js/, weight: 0.85 },
+      // The filename needs a left boundary: bare `ort.js` is a substring of
+      // support.js, report.js, export.js, sort.js and transport.js, which are
+      // among the most ordinary first-party script names there are.
+      { type: 'script', pattern: /onnxruntime-web|(?:^|[/.-])ort(?:\.min)?\.js/, weight: 0.85 },
       { type: 'global', path: 'ort', weight: 0.8 },
     ],
   },

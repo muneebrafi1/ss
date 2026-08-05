@@ -19,7 +19,10 @@ export const FRAMEWORKS: Fingerprint[] = [
     implies: ['react'],
     signals: [
       { type: 'global', path: '__NEXT_DATA__', weight: 0.9 },
-      { type: 'global', path: 'next', weight: 0.6 },
+      // `window.next` is NOT a Next.js signal. Named element access means any
+      // `<button id="next">` — pagination, a carousel, a multi-step form —
+      // defines it, and at 0.6 it cleared the display threshold on its own.
+      // __NEXT_DATA__, /_next/static/ and #__next below cover Next.js without it.
       { type: 'script', pattern: /\/_next\/static\//, weight: 0.9 },
       { type: 'header', name: 'x-powered-by', pattern: /Next\.js/, weight: 0.9 },
       { type: 'header', name: 'x-nextjs-prerender', weight: 0.85 },

@@ -73,7 +73,11 @@ export const CMS: Fingerprint[] = [
     website: 'https://ghost.org',
     signals: [
       { type: 'meta', name: 'generator', pattern: /Ghost/i, weight: 0.95 },
-      { type: 'script', pattern: /sodo-search|ghost\.min\.js|portal\.min\.js/, weight: 0.9 },
+      // `portal.min.js` alone was too ordinary a filename to carry Ghost at
+      // 0.9 — "portal" is a plausible name for any site's own bundle. Ghost
+      // serves both of these from a /ghost/ path, which is what makes them
+      // Ghost's rather than merely similarly named.
+      { type: 'script', pattern: /sodo-search|ghost\.min\.js|\/ghost\/[^"']*portal\.min\.js/, weight: 0.9 },
       { type: 'html', pattern: /ghost-portal|data-ghost/, weight: 0.8 },
     ],
     version: [{ from: 'meta', name: 'generator', pattern: /Ghost\s+([\d.]+)/ }],

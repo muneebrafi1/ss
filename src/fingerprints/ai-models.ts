@@ -22,7 +22,16 @@ export const AI_MODELS: Fingerprint[] = [
       { type: 'request', pattern: /(^|\.)api\.openai\.com\//, weight: 0.95 },
       { type: 'request', pattern: /oaidalleapiprodscus\.blob\.core\.windows\.net/, weight: 0.9 },
       { type: 'request', pattern: /\.openai\.azure\.com\//, weight: 0.9 },
-      { type: 'bundle', pattern: /\b(?:gpt-4o(?:-mini)?|gpt-4\.1|gpt-4-turbo|gpt-3\.5-turbo|o[134](?:-mini)?)\b/, weight: 0.7 },
+      // The long gpt-* ids are safe bare; `o1`/`o3`/`o4` are two characters and
+      // collide with minifier-generated identifiers in any bundle, so they must
+      // appear quoted — which is how a model id is actually written in source.
+      // The version matcher below already required exactly this.
+      {
+        type: 'bundle',
+        pattern:
+          /\b(?:gpt-4o(?:-mini)?|gpt-4\.1|gpt-4-turbo|gpt-3\.5-turbo)\b|["'`]o[134](?:-mini)?["'`]/,
+        weight: 0.7,
+      },
       { type: 'bundle', pattern: /["'`]openai["'`]|openai\/(?:index|core)\.mjs/, weight: 0.55 },
       // An OpenAI-shaped route proxied through the site's own domain. Common,
       // but provider-agnostic, so it only reinforces — never detects alone.

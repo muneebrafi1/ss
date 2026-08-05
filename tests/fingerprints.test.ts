@@ -97,4 +97,69 @@ describe('fingerprint database', () => {
     )
     expect(bad).toEqual([])
   })
+
+  /*
+   * A short all-letters filename can be the tail of an ordinary word.
+   *
+   * `ort.js` matched support.js, report.js and export.js; `video.js` matched
+   * hero-video.js. Both were unanchored filename patterns whose distinctive
+   * token was short enough to sit at the end of a common first-party filename.
+   *
+   * The bar is deliberately narrow. A token with a dot, a hyphen or a slash in
+   * it is already vendor-shaped (`mapbox-gl.js`, `cal.com/embed.js`), and a
+   * longer word is not realistically the tail of anything (`leaflet.js`). Only
+   * the short, purely alphabetic case needs a left boundary to be safe.
+   *
+   * Note what is NOT tested here. An earlier version of this rule tried to flag
+   * short undotted GLOBALS the same way, and named 48 legitimate entries —
+   * window.Stripe, window.Shopify, window.posthog. Nothing mechanical separates
+   * a brand name from an English word, so that job belongs to
+   * tests/false-positives.test.ts, which checks behaviour against real evidence
+   * instead of guessing from shape.
+   */
+  /*
+   * Tokens judged distinctive enough to stand alone despite being short.
+   *
+   * This is a human decision recorded in code rather than a pattern, because
+   * "is this word a plausible first-party filename" is a judgement. Each of
+   * these is a product name with no ordinary-English reading, so a file called
+   * `matomo.js` is Matomo's. `portal` failed exactly this test and was fixed
+   * rather than listed — adding a name here should feel like a decision.
+   */
+  const DISTINCTIVE = new Set(['matomo', 'piwik', 'ghost'])
+
+  const unanchoredShortFilename = (source: string): string[] =>
+    source.split('|').filter((branch) => {
+      const token = /^([A-Za-z]+)\\\.(?:min\\\.)?js/.exec(branch)?.[1]
+      if (token === undefined || token.length > 6) return false
+      if (DISTINCTIVE.has(token.toLowerCase())) return false
+      // A branch that goes on to require another literal after the filename is
+      // already disambiguated — `array\.js.{0,20}posthog` cannot match a
+      // first-party array.js unless "posthog" is right next to it.
+      return !/\.\{\d+,\d+\}/.test(branch)
+    })
+
+  it('anchors short filename branches of a script pattern', () => {
+    const loose = DATABASE_FINGERPRINTS.flatMap((f) =>
+      f.signals
+        .filter((s) => s.type === 'script')
+        .flatMap((s) =>
+          unanchoredShortFilename((s as { pattern: RegExp }).pattern.source).map(
+            (branch) => `${f.id}: /${branch}/`,
+          ),
+        ),
+    )
+    expect(loose).toEqual([])
+  })
+
+  // The rule above is only worth having if it would have caught the two it was
+  // written for, and left the entries it must not touch alone.
+  it('the anchoring rule catches what it was written for', () => {
+    expect(unanchoredShortFilename('onnxruntime-web|ort(?:\\.min)?\\.js')).toHaveLength(0)
+    expect(unanchoredShortFilename('onnxruntime-web|ort\\.js')).toEqual(['ort\\.js'])
+    expect(unanchoredShortFilename('video\\.js|videojs')).toEqual(['video\\.js'])
+    // Must stay silent on these.
+    expect(unanchoredShortFilename('leaflet\\.js')).toHaveLength(0)
+    expect(unanchoredShortFilename('(?:^|\\/)video\\.js')).toHaveLength(0)
+  })
 })

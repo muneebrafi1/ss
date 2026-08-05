@@ -4,7 +4,7 @@
     "{}",
     "{}"
   ],
-  "collectedAt": 1785270261525,
+  "collectedAt": 1785934293611,
   "cookieNames": [
     "__stripe_mid",
     "__clerk_db_jwt",
@@ -33,12 +33,11 @@
   "inlineScripts": [],
   "metas": {},
   "requests": [
-    "app.fixture.test/_next/static/chunks/main-app.js",
     "js.stripe.com/v3",
     "static.hotjar.com/c/hotjar-123.js",
-    "clerk.app.fixture.test.accounts.dev/v1/client",
     "api.openai.com/v1/chat/completions",
     "app.posthog.com/e/?ip=1",
+    "clerk.app.fixture.test.accounts.dev/v1/client",
     "abcdefgh.supabase.co/rest/v1/posts?select=*",
     "o12345.ingest.sentry.io/api/1/envelope/?sentry_key=abc",
     "widget.intercom.io/widget/abc123",
@@ -46,14 +45,15 @@
     "gs1.svc.us-east-1.pinecone.io/query",
     "api.elevenlabs.io/v1/text-to-speech/voice",
     "res.cloudinary.com/demo/image/upload/sample.jpg",
-    "cdn.segment.com/",
-    "app.fixture.test/favicon.ico"
+    "app.fixture.test/favicon.ico",
+    "app.fixture.test/_next/static/chunks/main-app.js",
+    "cdn.segment.com/"
   ],
   "responseHeaders": {
     "access-control-allow-origin": "*",
     "connection": "keep-alive",
     "content-type": "text/html; charset=utf-8",
-    "date": "Tue, 28 Jul 2026 20:24:15 GMT",
+    "date": "Wed, 05 Aug 2026 12:51:29 GMT",
     "keep-alive": "timeout=5",
     "server": "Vercel",
     "transfer-encoding": "chunked",

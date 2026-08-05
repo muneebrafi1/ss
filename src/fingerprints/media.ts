@@ -91,7 +91,9 @@ export const MEDIA: Fingerprint[] = [
     website: 'https://videojs.com',
     signals: [
       { type: 'global', path: 'videojs', weight: 0.95 },
-      { type: 'script', pattern: /video(?:\.min)?\.js|videojs/, weight: 0.85 },
+      // Left-anchored so a first-party `hero-video.js` or `promo-video.js` does
+      // not match, while `vjs.zencdn.net/8.x/video.min.js` still does.
+      { type: 'script', pattern: /(?:^|\/)video(?:\.min)?\.js|videojs|video-js/, weight: 0.85 },
     ],
     version: [{ from: 'global', path: 'videojs.VERSION' }],
   },

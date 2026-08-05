@@ -67,7 +67,11 @@ export const AUTH: Fingerprint[] = [
     signals: [
       { type: 'storage', pattern: /^sb-[\w-]+-auth-token/, weight: 0.9 },
       { type: 'cookie', pattern: /^sb-[\w-]+-auth-token/, weight: 0.9 },
-      { type: 'request', pattern: /\/auth\/v1\/(?:token|user|authorize)/, weight: 0.8 },
+      // Anchored to the vendor host. `/auth/v1/token` is an unremarkable
+      // first-party API path, and at 0.8 it carried Supabase Auth alone — and
+      // via `implies`, dragged Supabase in behind it.
+      { type: 'request', pattern: /\.supabase\.(?:co|in|net)\/auth\/v1\//, weight: 0.9 },
+      { type: 'request', pattern: /\/auth\/v1\/(?:token|user|authorize)/, weight: 0.35 },
     ],
   },
   {

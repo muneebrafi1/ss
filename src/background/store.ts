@@ -292,6 +292,19 @@ export async function flushAndRead(tabId: number): Promise<Evidence | null> {
  * point: no new document loads, the scripts and globals are unchanged, and the
  * site's stack is by definition the same one.
  */
+/**
+ * The navigation token currently in force for a tab.
+ *
+ * Exposed so a long-running job can capture it at the start and check it again
+ * before writing. `recordEvidence` reads the token at the moment it is called,
+ * which is correct for collection — a patch belongs to whatever page is loaded
+ * when it is produced — but wrong for deep scan, whose results belong to the
+ * page that was loaded when the user pressed the button, seconds earlier.
+ */
+export function currentToken(tabId: number): string | null {
+  return navTokens.get(tabId) ?? null
+}
+
 export function resetEvidence(tabId: number, url: string, _hostname: string): void {
   const timer = timers.get(tabId)
   if (timer) clearTimeout(timer)

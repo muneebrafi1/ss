@@ -32,7 +32,9 @@ export const ECOMMERCE: Fingerprint[] = [
     implies: ['wordpress', 'php'],
     signals: [
       { type: 'meta', name: 'generator', pattern: /WooCommerce/i, weight: 0.95 },
-      { type: 'html', pattern: /woocommerce(?:-page|-js)?|wc-block/, weight: 0.85 },
+      // The suffix group was optional, so this reduced to the bare word
+      // "woocommerce" — matching any page that merely mentions the product.
+      { type: 'html', pattern: /woocommerce-(?:page|js|no-js)|wc-block|woocommerce_params/, weight: 0.85 },
       { type: 'cookie', pattern: /^woocommerce_|^wp_woocommerce_session_/, weight: 0.9 },
     ],
     version: [{ from: 'meta', name: 'generator', pattern: /WooCommerce\s+([\d.]+)/ }],
@@ -96,7 +98,9 @@ export const ECOMMERCE: Fingerprint[] = [
     icon: 'medusa',
     website: 'https://medusajs.com',
     signals: [
-      { type: 'request', pattern: /\/store\/(?:products|carts|regions)\?/, weight: 0.75 },
+      // A first-party path shape that any storefront on earth might use. It may
+      // corroborate the SDK signals below; it must not carry the detection.
+      { type: 'request', pattern: /\/store\/(?:products|carts|regions)\?/, weight: 0.35 },
       { type: 'bundle', pattern: /@medusajs\/(?:medusa-js|js-sdk)/, weight: 0.85 },
     ],
   },

@@ -208,6 +208,19 @@ try {
       check(`detects ${expected}`, names.some((n) => n.startsWith(expected)))
     }
     check('reads the WordPress version', names.includes('WordPress 6.7.1'))
+    /*
+     * This fixture installs GA4 the standard way — `window.dataLayer = []` plus
+     * gtag.js — and no Tag Manager container. The panel named Google Tag Manager
+     * here anyway, because `dataLayer` alone was weighted 0.7, and no assertion
+     * noticed: the check list was all presence, so the fixture emitted a false
+     * card on every run. gtag.js and GTM are different products, and dataLayer
+     * belongs to both.
+     */
+    check(
+      'does not claim a Tag Manager container from a plain GA4 install',
+      !names.some((n) => n.startsWith('Google Tag Manager')),
+      names.join(', '),
+    )
     for (const absent of ['Next.js', 'Vercel', 'Stripe', 'Clerk', 'Supabase']) {
       check(`no false positive: ${absent}`, !names.some((n) => n.startsWith(absent)))
     }
@@ -512,7 +525,7 @@ try {
     // several vendors and prove none of them.
     for (const absent of [
       'PostHog', 'Sentry', 'Plausible', 'Segment', 'Google Analytics',
-      'FastAPI', 'Auth.js', 'OpenAI',
+      'FastAPI', 'Auth.js', 'OpenAI', 'Medusa', 'Supabase',
     ]) {
       check(`does not guess ${absent} from a path shape`, !names.some((n) => n.startsWith(absent)))
     }

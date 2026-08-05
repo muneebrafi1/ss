@@ -177,7 +177,14 @@ try {
   {
     const pagesBefore = context.pages().length
     await popup.click('button[data-tool="Stripe"]')
-    await sleep(900)
+    /*
+     * Wait for the tab, not for a stopwatch. A fixed sleep here failed roughly
+     * one run in ten — opening a tab means a round trip to the browser process
+     * and a fresh renderer, which is not reliably under 900ms on a loaded
+     * machine. The condition is what the check is about; the duration never was.
+     */
+    const deadline = Date.now() + 10000
+    while (context.pages().length <= pagesBefore && Date.now() < deadline) await sleep(100)
     check('clicking a tool opens its site', context.pages().length > pagesBefore)
     for (const p of context.pages().slice(pagesBefore)) await p.close().catch(() => {})
   }

@@ -49,7 +49,10 @@ export function headersToRecord(
   return record
 }
 
-export function registerNetworkListeners(shouldCollect: (tabId: number) => boolean): void {
+export function registerNetworkListeners(
+  shouldCollect: (tabId: number) => boolean,
+  onMainFrame: (tabId: number, hostname: string) => void = () => {},
+): void {
   // A new top-level document starts a fresh record. This fires before the
   // response headers for that document arrive, which is precisely why the reset
   // lives here rather than on `tabs.onUpdated` — that event reports the new URL
@@ -66,6 +69,12 @@ export function registerNetworkListeners(shouldCollect: (tabId: number) => boole
         }
       })()
       if (parsed && (parsed.protocol === 'http:' || parsed.protocol === 'https:')) {
+        // The caller's hostname cache is told first. This is the only listener
+        // guaranteed to run before `onHeadersReceived` for the same document, so
+        // it is the only place that can make a per-site decision correct on the
+        // very first navigation into a host — including the one that woke the
+        // worker, where `tabs.onUpdated` has not fired yet.
+        onMainFrame(details.tabId, parsed.hostname)
         resetEvidence(details.tabId, details.url, parsed.hostname)
       }
       return undefined
@@ -115,8 +124,29 @@ export function registerNetworkListeners(shouldCollect: (tabId: number) => boole
  * only when the headers are genuinely absent.
  */
 export async function recoverResponseHeaders(url: string): Promise<Record<string, string>> {
+  const controller = new AbortController()
+  /*
+   * `force-cache` only avoids the network when a cache entry exists, and a
+   * document sent `Cache-Control: no-store` — every authenticated app — has
+   * none. So this can be a real request, and it is awaited on the path that
+   * renders the panel: an origin that accepts the connection and then never
+   * answers would park the panel on its skeleton indefinitely. Deep scan already
+   * bounds its own fetches for the same reason.
+   */
+  const timer = setTimeout(() => controller.abort(), 3000)
   try {
-    const response = await fetch(url, { cache: 'force-cache', credentials: 'omit' })
+    const response = await fetch(url, {
+      cache: 'force-cache',
+      credentials: 'omit',
+      // Without this, a credential-less refetch of an auth-gated page follows
+      // the redirect to the identity provider and returns ITS headers — so a
+      // site behind SSO would be reported as running the IdP's stack, and that
+      // wrong answer would be written into durable scan history.
+      redirect: 'manual',
+      signal: controller.signal,
+    })
+    // A `manual` redirect surfaces as an opaqueredirect response with no
+    // readable headers, which the loop below correctly turns into {}.
     const headers: Record<string, string> = {}
     response.headers.forEach((value, name) => {
       headers[name.toLowerCase()] = value
@@ -126,6 +156,8 @@ export async function recoverResponseHeaders(url: string): Promise<Record<string
     return headers
   } catch {
     return {}
+  } finally {
+    clearTimeout(timer)
   }
 }
 
